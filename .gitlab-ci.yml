@@ -13,8 +13,13 @@ review:
       echo "Extracting OpenCode API key"
       if [ -f "$OPENCODE_AUTH_JSON" ]; then
         OPENCODE_API_KEY="$(jq -r '.opencode.providers.opencode.apiKey // .opencode.apiKey' "$OPENCODE_AUTH_JSON")"
+        OPENCODE_BASE_URL="$(jq -r '.opencode.providers.opencode.baseUrl // .opencode.baseUrl // "https://api.opencode.ai/v1"' "$OPENCODE_AUTH_JSON")"
       else
         OPENCODE_API_KEY="$(printf '%s' "$OPENCODE_AUTH_JSON" | jq -r '.opencode.providers.opencode.apiKey // .opencode.apiKey')"
+        OPENCODE_BASE_URL="$(printf '%s' "$OPENCODE_AUTH_JSON" | jq -r '.opencode.providers.opencode.baseUrl // .opencode.baseUrl // "https://api.opencode.ai/v1"')"
+      fi
+      if echo "$OPENCODE_BASE_URL" | grep -q 'zen.opencode.ai'; then
+        OPENCODE_BASE_URL="https://api.opencode.ai/v1"
       fi
 
       echo "Fetching target branch"
@@ -42,7 +47,7 @@ review:
       }' > payload.json
 
       echo "Calling OpenCode Zen API"
-      curl -s https://zen.opencode.ai/v1/chat/completions \
+      curl -s "${OPENCODE_BASE_URL%/}/chat/completions" \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $OPENCODE_API_KEY" \
         -d @payload.json > review-response.json
