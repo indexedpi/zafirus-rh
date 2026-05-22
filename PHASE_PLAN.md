@@ -27,6 +27,18 @@
 - Mobile QA at 375 px: NewCaseModal footer stacks via `flex-col sm:flex-row`; CaseActions uses `flex-wrap` with `min-h-[44px]` on every CTA; CaseDetail tab strip uses `overflow-x-auto scrollbar-hide`; CandidateWizard footer uses `flex-col-reverse sm:flex-row` (Phase 7E); AuditTab filter chips and detail grid wrap; OverviewTab uses `min-w-0` + `break-words` throughout. No horizontal page scroll risks detected.
 - Overview / Audit link decision (Part E): **Option 2 — wired locally**. `CaseDetail` now passes `onOpenAudit={() => setActiveTab('audit')}` to `OverviewTab`. The recent-activity card shows a real **"Ver auditoría completa"** button that switches tabs; if the prop is ever omitted, it falls back to the honest passive label **"Disponible en la pestaña Auditoría"**. No global state introduced.
 
+## Phase 7H — Light Workspace System
+- **Status:** Complete.
+- Replaced dark dashboard token system with Zafirus Light Product System. All CSS custom properties updated: `--bg-base` → `#f0f2f5`, `--bg-surface` → `#ffffff`, `--bg-elevated` → `#ffffff`, text tokens → slate palette, border tokens → light gray, status subtles → real light backgrounds, shadows → light ambient.
+- Added `--shell-bg` / `--shell-bg-soft` / `--shell-text` / `--shell-muted` / `--shell-active` tokens for persistent navy shell.
+- TopBar converted to navy shell using shell tokens, native buttons replacing `Button` component for shell-appropriate styling.
+- CaseList, CaseDetail, DataTab, TasksTab, AuditTab, OverviewTab auto-fix through token cascade. Hardcoded `hover:bg-white/[0.02]` instances replaced with `hover:bg-[var(--bg-subtle)]`.
+- Task console/output panels intentionally retain dark `bg-[#0f172a]` (terminal aesthetic).
+- Email preview intentionally retains white surface (pre-existing, correct).
+- Pattern SVG background removed from body (does not suit light canvas).
+- DESIGN.md rewritten as canonical Zafirus Light Product System.
+- `src/store.ts` and `src/types.ts` unchanged.
+
 ## Phase 8 — Google Workspace Integration Implementation
 - **Goal:** Backend and integration phase. This is **not** a visual redesign.
 - Scope (planning + execution): Admin SDK auth (service account / domain-wide delegation), user provisioning (`directory.users.insert`), group membership (`directory.members`), Gmail signature configuration (`gmail.users.settings.sendAs`), idempotency, retry policy, audit feed from real integration events back into the `auditLog` contract defined in `src/types.ts`.

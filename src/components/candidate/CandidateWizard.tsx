@@ -4,10 +4,23 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { CheckCircle, AlertTriangle, ChevronLeft, ChevronRight, Send, Plus, Trash2, CheckCircle2, ShieldCheck, Building, CreditCard, Bitcoin, FileText } from 'lucide-react';
-import { TAX_ID_TYPES, Reference } from '../../types';
+import { TAX_ID_TYPES, Reference, CandidateData } from '../../types';
 import { cn } from '../../utils/cn';
 import { v4 as uuidv4 } from 'uuid';
 import { ZafirusLogo } from '../ui/ZafirusLogo';
+
+// ─── TYPES ─────────────────────────────────────────────────────────────────────
+
+interface IntakeStep {
+  id: number;
+  title: string;
+}
+
+interface WizardStepProps {
+  data: CandidateData;
+  updateData: (updates: Partial<CandidateData>) => void;
+  showErrors: boolean;
+}
 
 // ─── SUBCOMPONENTS ─────────────────────────────────────────────────────────────
 
@@ -45,7 +58,7 @@ function CorrectionNotice({ note }: { note: string | null }) {
   );
 }
 
-function IntakeProgressStepper({ steps, currentStepId }: { steps: any[], currentStepId: number }) {
+function IntakeProgressStepper({ steps, currentStepId }: { steps: IntakeStep[], currentStepId: number }) {
   return (
     <div className="flex items-center justify-center gap-1 sm:gap-3 mb-8 overflow-x-auto scrollbar-hide px-2 py-1">
       {steps.map((s, i) => {
@@ -110,7 +123,7 @@ function StepShell({ title, helper, children }: { title: string, helper: string,
 
 // ─── STEPS ───────────────────────────────────────────────────────────────────
 
-function FiscalStep({ data, updateData, showErrors }: any) {
+function FiscalStep({ data, updateData, showErrors }: WizardStepProps) {
   const isTypeError = showErrors && !data.taxIdType;
   const isValueError = showErrors && !data.taxIdValue;
 
@@ -180,7 +193,7 @@ function PaymentMethodCard({ selected, onSelect, icon: Icon, title, description 
   );
 }
 
-function PaymentStep({ data, updateData, showErrors }: any) {
+function PaymentStep({ data, updateData, showErrors }: WizardStepProps) {
   return (
     <StepShell
       title="Datos de cobro"
@@ -314,7 +327,7 @@ function PaymentStep({ data, updateData, showErrors }: any) {
   );
 }
 
-function ReferencesStep({ data, updateData, showErrors }: any) {
+function ReferencesStep({ data, updateData, showErrors }: WizardStepProps) {
   const references: Reference[] = data.references || [];
 
   const addReference = () => {
@@ -432,7 +445,7 @@ function ReferencesStep({ data, updateData, showErrors }: any) {
   );
 }
 
-function FilesStep({ data, updateData }: any) {
+function FilesStep({ data, updateData }: Pick<WizardStepProps, 'data' | 'updateData'>) {
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>, fileType: 'w8' | 'qr_binance') => {
     const file = e.target.files?.[0];
     if (file) {
@@ -533,7 +546,7 @@ function FilesStep({ data, updateData }: any) {
   );
 }
 
-function ReviewStep({ data }: any) {
+function ReviewStep({ data }: Pick<WizardStepProps, 'data'>) {
   const missingFiles = (data.needsW8 && !data.files?.some((f: any) => f.fileType === 'w8')) ||
                        (data.hasQrBinance && !data.files?.some((f: any) => f.fileType === 'qr_binance'));
 

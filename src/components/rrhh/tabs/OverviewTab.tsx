@@ -1,7 +1,10 @@
 import { useStore } from '../../../store';
-import { ShieldAlert, XCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { ShieldAlert, XCircle, ArrowRight, CheckCircle2, MapPin, Calendar } from 'lucide-react';
 import { cn } from '../../../utils/cn';
 import type { AuditEvent, CaseStatus } from '../../../types';
+import { COUNTRIES, TEAMS, CONTRACT_TYPES } from '../../../types';
+import { Avatar } from '../../ui/Avatar';
+import { Badge } from '../../ui/Badge';
 
 // ─── Action labels (Spanish) ────────────────────────────────────────────────
 // Source of truth lives in store.ts; we only translate for display.
@@ -120,7 +123,11 @@ export function OverviewTab({ onOpenAudit }: OverviewTabProps = {}) {
   const selectedCase = useStore(state => state.getSelectedCase());
   if (!selectedCase) return null;
 
-  const { auditLog, status, blockReason, tasks, correctionNote } = selectedCase;
+  const { employee, candidateData, auditLog, status, blockReason, tasks, correctionNote } = selectedCase;
+  const country = COUNTRIES.find(c => c.code === employee.countryId);
+  const team = TEAMS.find(t => t.value === employee.team);
+  const contractType = CONTRACT_TYPES.find(c => c.value === employee.contractType);
+  const isConsolidated = candidateData?.consolidated === true;
   const hasFailedTasks = tasks.some(t => t.status === 'failed');
   const currentIndex = resolveCurrentIndex(status, auditLog);
   const sortedEvents = [...auditLog].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
@@ -131,6 +138,52 @@ export function OverviewTab({ onOpenAudit }: OverviewTabProps = {}) {
 
   return (
     <div className="space-y-6">
+      {/* Identity header — only visible on this tab */}
+      <div className="flex items-start gap-3 lg:gap-4 pb-2">
+        <Avatar name={employee.name} lastName={employee.lastName} size="lg" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h2 className="text-lg lg:text-[22px] font-bold leading-tight text-[var(--text-primary)] truncate">
+              {employee.name} {employee.lastName}
+            </h2>
+            <Badge
+              status={status}
+              pulse={status === 'candidate_submitted' || status === 'active_pending_automation'}
+            />
+          </div>
+          <div className="flex items-center gap-2.5 mt-1 text-xs text-[var(--text-secondary)] flex-wrap">
+            <span>{employee.role}</span>
+            <span className="text-[var(--text-tertiary)] font-light">·</span>
+            <span className="uppercase font-mono">{team?.label || employee.team}</span>
+            <span className="text-[var(--text-tertiary)] font-light">·</span>
+            <span>{contractType?.label || employee.contractType}</span>
+          </div>
+          <div className="flex items-center gap-3 mt-2 text-[11px] text-[var(--text-tertiary)] flex-wrap">
+            <span className="flex items-center gap-1">
+              <MapPin className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>{employee.cityId}, {country?.name || employee.countryId}</span>
+            </span>
+            <span className="text-[var(--text-tertiary)] font-light">·</span>
+            <span className="flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>Inicio: {new Date(employee.startDate + 'T00:00:00').toLocaleDateString('es-AR', { dateStyle: 'medium' })}</span>
+            </span>
+            <span className="text-[var(--text-tertiary)] font-light">·</span>
+            <span className="text-[var(--brand-primary)] font-bold uppercase tracking-wider">
+              {status === 'draft' && 'Paso: Enviar formulario'}
+              {status === 'candidate_invited' && 'Paso: Esperando candidato'}
+              {status === 'candidate_submitted' && 'Paso: Iniciar revisión'}
+              {status === 'hr_review' && (!isConsolidated ? 'Paso: Consolidar datos' : 'Paso: Aprobar onboarding')}
+              {status === 'ready_to_activate' && 'Paso: Activar Workspace'}
+              {status === 'active_pending_automation' && 'Paso: Tareas en curso'}
+              {status === 'operative' && 'Paso: Colaborador Operativo'}
+              {status === 'blocked' && 'Paso: Resolver bloqueo'}
+              {status === 'cancelled' && 'Paso: Caso archivado'}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Top status banner — only when the case is outside the calm happy path */}
       {(isBlocked || isCancelled || correctionNote) && (
         <div className={cn(

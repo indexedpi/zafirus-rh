@@ -94,9 +94,9 @@ The code reviewer checks for:
 
 ## 🎯 Project Context
 
-- **Stack**: React 18 + Vite + TypeScript + Tailwind CSS (demo)
+- **Stack**: React 19 + Vite + TypeScript + Tailwind CSS (demo)
 - **Future**: NestJS + TypeORM + PostgreSQL + AWS (prod)
-- **Design**: Zafiro blue (#549dd6), dark theme, Sora font
+- **Design**: Zafirus blue (#459CDB), dark theme, Sora font
 - **Domain**: HR onboarding automation for Zafirus Technologies
 
 ## 🔗 References

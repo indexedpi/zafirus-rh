@@ -28,6 +28,13 @@
 - Sensitive-field redaction is heuristic (key allowlist + length/URL heuristic); intentionally over-redacting.
 - Filter classification of audit events is heuristic and matches today's `makeAudit` call sites in `src/store.ts`.
 
+## Phase 7H — Light workspace remaining risks
+- `TaskOutputPanel` in `TasksTab` uses hardcoded `bg-[#0f172a]` and `text-slate-300` — intentional terminal aesthetic. If the overall design direction changes, this should be tokenized via a `--console-bg` / `--console-text` token pair.
+- `EmailSignatureBanner` in `EmailTab` uses `bg-[var(--bg-base)]` for the logo container — now renders as light gray, which is correct. The gray-200/gray-800 hardcoded classes in the email preview are intentional (email client simulation must stay light regardless of app theme).
+- `DataTab.SectionHeader` uses inline `borderLeftColor` for section accent colors. These are cosmetic only and use token references; no functional risk.
+- `CandidateWizard.CorrectionNotice` uses `bg-[var(--bg-base)]` for the note body — now renders as light gray `#f0f2f5`. Acceptable contrast against warning-subtle background.
+- Status subtles updated to real opaque light colors (`#f0fdf4`, `#fef2f2`, etc.) which may look slightly bolder than before — this is by design for WCAG compliance on light backgrounds.
+
 ## Phase 7G — Final QA remaining risks
 - Memory-only state: any browser refresh resets the demo unless `seedDemo` runs on first load (it does, but cases created mid-session are lost on hard reload).
 - Split-screen RRHH / Candidato at 375 px collapses to a single-pane switcher; this is correct for mobile but is a behavior the presenter must walk the audience through.

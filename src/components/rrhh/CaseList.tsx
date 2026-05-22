@@ -1,4 +1,4 @@
-import { Plus, Users, Lock, Clock, CheckCircle, AlertTriangle, FileText, Globe, ArrowRight } from 'lucide-react';
+import { Plus, Users, Lock, Clock, CheckCircle, AlertTriangle, FileText, Globe, ArrowRight, ChevronsLeft } from 'lucide-react';
 import { useState } from 'react';
 import { useStore } from '../../store';
 import { Button } from '../ui/Button';
@@ -7,7 +7,11 @@ import { NewCaseModal } from './NewCaseModal';
 import { cn } from '../../utils/cn';
 import { COUNTRIES, TEAMS } from '../../types';
 
-export function CaseList() {
+interface CaseListProps {
+  onCollapse?: () => void;
+}
+
+export function CaseList({ onCollapse }: CaseListProps = {}) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { cases, selectedCaseId, selectCase } = useStore();
 
@@ -98,10 +102,22 @@ export function CaseList() {
           <span className="text-sm font-semibold text-[var(--text-primary)]">Casos</span>
           <span className="text-xs font-medium text-[var(--text-tertiary)]">({cases.length})</span>
         </div>
-        <Button size="sm" onClick={() => setIsModalOpen(true)} className="min-h-[32px] px-2.5 text-xs" aria-label="Crear nuevo caso de onboarding">
-          <Plus className="w-3.5 h-3.5" />
-          <span>Nuevo</span>
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button size="sm" onClick={() => setIsModalOpen(true)} className="min-h-[32px] px-2.5 text-xs" aria-label="Crear nuevo caso de onboarding">
+            <Plus className="w-3.5 h-3.5" />
+            <span>Nuevo</span>
+          </Button>
+          {onCollapse && selectedCaseId && (
+            <button
+              onClick={onCollapse}
+              className="hidden md:inline-flex items-center justify-center w-8 h-8 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
+              aria-label="Contraer lista de casos"
+              title="Contraer"
+            >
+              <ChevronsLeft className="w-4 h-4" aria-hidden="true" />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto divide-y divide-[var(--border-subtle)] scrollbar-hide">
@@ -139,10 +155,10 @@ export function CaseList() {
                   onClick={() => selectCase(c.id)}
                   className={cn(
                     'w-full flex flex-col text-left p-3.5 rounded-lg transition-[background-color,border-color,box-shadow] duration-150 cursor-pointer outline-none border border-transparent min-h-[88px]',
-                    'hover:bg-white/[0.02] hover:border-[var(--border-subtle)]',
+                    'hover:bg-[var(--bg-subtle)] hover:border-[var(--border-default)]',
                     isSelected
-                      ? 'bg-[var(--brand-primary-subtle)] border-l border-l-[var(--brand-primary)] ring-1 ring-[var(--brand-primary)]/10'
-                      : 'border-l border-l-transparent'
+                      ? 'bg-[var(--brand-primary-subtle)] border-[var(--brand-primary)]/20 ring-1 ring-[var(--brand-primary)]/10'
+                      : 'border-transparent'
                   )}
                   aria-label={`Ver caso de onboarding de ${c.employee.name} ${c.employee.lastName}`}
                 >

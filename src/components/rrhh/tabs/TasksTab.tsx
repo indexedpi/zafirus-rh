@@ -173,11 +173,16 @@ function TaskRow({ task, selectedCase }: { task: OnboardingTask, selectedCase: a
     <div className="bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-lg overflow-hidden transition-colors">
       {/* Row Header */}
       <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        aria-label={expanded ? `Ocultar detalle de ${getTaskLabel(task.type, task.metadata)}` : `Ver detalle de ${getTaskLabel(task.type, task.metadata)}`}
         className={cn(
-          "flex items-start sm:items-center justify-between p-3.5 cursor-pointer hover:bg-[var(--bg-surface)]",
+          "flex items-start sm:items-center justify-between p-3.5 cursor-pointer hover:bg-[var(--bg-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary-glow)]",
           task.status === 'failed' && "bg-[var(--status-error-subtle)]/30"
         )}
         onClick={() => setExpanded(!expanded)}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(!expanded); } }}
       >
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto min-w-0">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -324,8 +329,7 @@ function EmptyAutomationState() {
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────
 
 export function TasksTab() {
-  const { getSelectedCase } = useStore();
-  const selectedCase = getSelectedCase();
+  const selectedCase = useStore(state => state.getSelectedCase());
 
   if (!selectedCase) return null;
 

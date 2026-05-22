@@ -76,7 +76,7 @@
 - [x] Acciones no mapeadas caen a "Acción registrada".
 
 ## Phase 7G — Final QA (code-level, verified in source)
-- [x] Sweep de tokens prohibidos vacío: `transition-all`, `transition: all`, `ease-spring`, `ease-bounce`, `ease-elastic`, `#549dd6`, `rgba(84,157,214`, `border-l-2`, `border-l-4`, `Operations Room`, `Control Dashboard`, `Readiness`, `raw JSON`, `Cancelarar`, `Screenshot`, `Link inválido`, `/demo#candidate`.
+- [x] Sweep de tokens prohibidos vacío en `src/`: `transition-all`, `transition: all`, `ease-spring`, `ease-bounce`, `ease-elastic`, `#549dd6`, `rgba(84,157,214`, `border-l-2`, `border-l-4`, `Operations Room`, `Control Dashboard`, `Readiness`, `raw JSON`, `Cancelarar`, `Screenshot`, `Link inválido`, `/demo#candidate`. — **Nota**: `opencode-config/` también saneado en Fix Pass A/B (refs a `#549dd6`, `Zafiro blue`, `React 18` corregidas).
 - [x] `select-none` solo aparece en el logo decorativo `ZafirusLogo`.
 - [x] Stale `{/* Readiness */}` en `EmailTab.tsx` reemplazado por `{/* Template status panel */}`.
 - [x] `TopBar` solo muestra Auto Demo / Reiniciar / badge "Demo" si `window.location.hash.includes('demo')`.
@@ -90,6 +90,30 @@
 - [x] No hay archivos temporales (`patch_*.py`, `*.tmp`, `*.bak`).
 - [x] `src/store.ts` y `src/types.ts` siguen sin modificarse.
 - [x] `npm run build` pasa después de Phase 7G.
+
+## Phase 7H — Light Workspace System (code-level, verified in source)
+- [x] `src/index.css` tokens updated: `--bg-base` `#f0f2f5`, `--bg-subtle` `#e8ebef`, `--bg-surface` `#ffffff`, `--bg-elevated` `#ffffff`, `--text-primary` `#0f172a`, `--text-secondary` `#475569`, border tokens → light slate palette, shadows → light ambient.
+- [x] Shell tokens added: `--shell-bg`, `--shell-bg-soft`, `--shell-text`, `--shell-muted`, `--shell-active`, `--shell-active-border`.
+- [x] Status subtle tokens use real light backgrounds (`#f0fdf4`, `#fef2f2`, `#fffbeb`, `#f0f9ff`).
+- [x] `TopBar.tsx` uses `--shell-bg` (deep navy), white/shell-text for logo and nav, native buttons with shell hover states.
+- [x] Pattern SVG background removed from `body` (not appropriate for light canvas).
+- [x] `hover:bg-white/[0.02]` replaced with `hover:bg-[var(--bg-subtle)]` in CaseList and CaseDetail.
+- [x] `TasksTab` console panel retains intentional dark terminal style (`bg-[#0f172a]`).
+- [x] Email preview retains intentional white surface.
+- [x] Forbidden sweep: no `bg-[#05080f]`, `bg-[#0c1120]`, `bg-[#101d30]`, `bg-slate-900`, `bg-slate-950`.
+- [x] `src/store.ts` and `src/types.ts` unchanged.
+- [x] `npm run build` passes.
+
+## Phase 7H — Light workspace runtime checklist (presenter)
+- [ ] TopBar is deep navy — white Zafirus logo, white text, muted nav items.
+- [ ] Main content canvas is light gray — not dark.
+- [ ] Cards (DataTab, TasksTab, AuditTab, OverviewTab) are white with subtle borders.
+- [ ] CaseList sidebar uses `--bg-subtle` (light gray), not dark.
+- [ ] Selected case in CaseList shows brand-subtle blue tint, not dark.
+- [ ] Task output/console panels remain dark (terminal style).
+- [ ] Email preview remains white.
+- [ ] No neon glow buttons anywhere in the workspace.
+- [ ] Mobile 375px: no horizontal scroll, no layout breaks.
 
 ## Phase 7G — Manual runtime checklist (presenter)
 - [ ] Abrir `/` y verificar que no aparecen badges, botones ni copy de demo.

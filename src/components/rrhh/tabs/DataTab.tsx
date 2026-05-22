@@ -156,7 +156,7 @@ function EditableField({
   return (
     <div
       onClick={() => setEditingField(fieldKey)}
-      className="flex flex-col gap-0.5 min-w-0 cursor-pointer group p-2 hover:bg-white/[0.02] rounded-lg border border-transparent hover:border-[var(--border-subtle)] min-h-[52px] justify-center transition-[background-color,border-color] duration-150 focus-visible:outline-none focus-visible:border-[var(--border-focus)] focus-visible:ring-1 focus-visible:ring-[var(--brand-primary-glow)]"
+      className="flex flex-col gap-0.5 min-w-0 cursor-pointer group p-2 hover:bg-[var(--bg-subtle)] rounded-lg border border-transparent hover:border-[var(--border-default)] min-h-[52px] justify-center transition-[background-color,border-color] duration-150 focus-visible:outline-none focus-visible:border-[var(--border-focus)] focus-visible:ring-1 focus-visible:ring-[var(--brand-primary-glow)]"
       role="button"
       tabIndex={0}
       aria-label={`Editar ${label}`}
@@ -177,25 +177,30 @@ function EditableField({
           </span>
         )}
       </div>
-      <span className="text-sm font-medium text-[var(--text-primary)] truncate flex items-center justify-between mt-1">
-        <span className={cn(!value && 'text-[var(--text-disabled)] font-light', 'truncate')}>{displayValue()}</span>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+      <div className="relative mt-1">
+        <span className={cn(
+          'text-sm font-medium block truncate',
+          !value ? 'text-[var(--text-disabled)] font-light' : 'text-[var(--text-primary)]'
+        )}>
+          {displayValue()}
+        </span>
+        <div className="absolute inset-y-0 right-0 hidden group-hover:flex items-center gap-1 bg-[var(--bg-elevated)] pl-2 pr-0.5 rounded">
           {copyable && value && (
             <button
               type="button"
               onClick={handleCopy}
-              className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
+              className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
               title="Copiar"
               aria-label="Copiar valor"
             >
               <Copy className="w-3.5 h-3.5" />
             </button>
           )}
-          <span className="text-[10px] text-[var(--brand-primary)] uppercase font-bold pl-1">
+          <span className="text-[10px] text-[var(--brand-primary)] uppercase font-bold pr-1">
             editar
           </span>
         </div>
-      </span>
+      </div>
     </div>
   );
 }
@@ -278,7 +283,6 @@ interface ProfileSummaryPanelProps {
   referencesStepDone: boolean;
   w8StepDone: boolean;
   qrStepDone: boolean;
-  completionPercentage: number;
 }
 
 function ProfileSummaryPanel({
@@ -288,7 +292,6 @@ function ProfileSummaryPanel({
   referencesStepDone,
   w8StepDone,
   qrStepDone,
-  completionPercentage
 }: ProfileSummaryPanelProps) {
   const { employee, candidateData } = selectedCase;
   const candidateConsolidated = candidateData?.consolidated === true;
@@ -436,26 +439,6 @@ export function DataTab() {
     }
     return false;
   })();
-
-  // Calculate profile completeness
-  const coreFields = [
-    employee.name,
-    employee.lastName,
-    employee.CI,
-    employee.birthday,
-    employee.email,
-    employee.countryId,
-    employee.provinceId,
-    employee.cityId,
-    employee.startDate,
-    employee.role,
-    employee.team,
-    employee.contractType,
-    employee.managerName
-  ];
-  const totalFieldsCount = coreFields.length;
-  const filledFieldsCount = coreFields.filter(f => !!f).length;
-  const completionPercentage = Math.round((filledFieldsCount / totalFieldsCount) * 100);
 
   // Candidate info rows
   const taxIdType = TAX_ID_TYPES.find(t => t.code === candidateData?.taxIdType);
@@ -708,7 +691,7 @@ export function DataTab() {
                     <CheckItem label="Referencias Registradas" done={referencesStepDone} />
                     <CheckItem label="Documento W-8" done={w8StepDone} />
                     <CheckItem label="Código QR" done={qrStepDone} />
-                    <CheckItem label="Auditoría Verificada" done={true} />
+                    <CheckItem label="Auditoría Verificada" done={candidateSubmitted && candidateConsolidated} />
                   </div>
                 </div>
 
@@ -877,7 +860,6 @@ export function DataTab() {
             referencesStepDone={referencesStepDone}
             w8StepDone={w8StepDone}
             qrStepDone={qrStepDone}
-            completionPercentage={completionPercentage}
           />
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { useStore } from '../../../store';
 import { Button } from '../../ui/Button';
-import { Mail, Check, AlertCircle, Copy, FileText, Calendar, Link } from 'lucide-react';
+import { Mail, Check, AlertCircle, Copy, FileText, Calendar, Link, Maximize2, Minimize2 } from 'lucide-react';
 import { cn } from '../../../utils/cn';
 import { useState, useRef, useEffect } from 'react';
 import { ZafirusLogo } from '../../ui/ZafirusLogo';
@@ -12,6 +12,7 @@ const AGENDA_FIELDS: { key: string; label: string; placeholder: string }[] = [
   { key: 'managerMeetingTime', label: 'Horario reunión manager', placeholder: 'ej: 19/05 - 12:00 hs' },
   { key: 'managerMeetingLink', label: 'Link Meet manager', placeholder: 'https://meet.google.com/…' },
   { key: 'onboardingFolderUrl', label: 'Carpeta de onboarding', placeholder: 'https://drive.google.com/…' },
+  { key: 'kitRedesUrl', label: 'Kit de redes', placeholder: 'https://drive.google.com/…' },
 ];
 
 const VARIABLE_GROUPS = [
@@ -29,7 +30,7 @@ const VARIABLE_GROUPS = [
   },
   {
     title: 'Recursos',
-    keys: ['onboardingFolderUrl']
+    keys: ['onboardingFolderUrl', 'kitRedesUrl']
   }
 ];
 
@@ -45,8 +46,8 @@ function EmailSignatureBanner() {
         <span className="text-gray-500 text-xs mt-1">www.zafirus.tech</span>
       </div>
       <div className="flex items-center gap-4">
-        <div className="w-0.5 h-10 bg-[#459CDB]" />
-        <div className="bg-[#0f172a] p-3 rounded flex items-center justify-center">
+        <div className="w-0.5 h-10 bg-[var(--brand-primary)]" />
+        <div className="bg-[var(--bg-base)] p-3 rounded flex items-center justify-center">
           <ZafirusLogo size={24} glow={false} />
         </div>
       </div>
@@ -89,7 +90,7 @@ function WelcomeEmailPreview({ variables, subject }: { variables: Record<string,
       </div>
 
       <div className="p-6 lg:p-8 overflow-y-auto flex-1 text-[13px] leading-relaxed">
-        <h1 className="text-xl font-extrabold tracking-tight mb-4" style={{ color: '#459CDB' }}>
+        <h1 className="text-xl font-extrabold tracking-tight mb-4" style={{ color: 'var(--brand-primary)' }}>
           ¡BIENVENIDA/O A ZAFIRUS TECHNOLOGIES!
         </h1>
 
@@ -123,7 +124,7 @@ function WelcomeEmailPreview({ variables, subject }: { variables: Record<string,
         {/* Onboarding Folder */}
         <div className="mb-6">
           <h2 className="font-bold text-sm border-b border-gray-200 pb-1 mb-2 flex items-center gap-1.5">
-            <FileText className="w-4 h-4 text-[#459CDB]" /> Carpeta de onboarding
+            <FileText className="w-4 h-4 text-[var(--brand-primary)]" /> Carpeta de onboarding
           </h2>
           <ul className="list-disc list-inside ml-4 text-gray-600 space-y-1 mb-2">
             <li>Documentos y políticas internas</li>
@@ -131,26 +132,37 @@ function WelcomeEmailPreview({ variables, subject }: { variables: Record<string,
             <li>Materiales de referencia</li>
             <li>Fondos personalizados y otros recursos</li>
           </ul>
-          <a href="#" className="text-[#459CDB] font-medium underline" onClick={e => e.preventDefault()}>
+          <a href="#" className="text-[var(--brand-primary)] font-medium underline" onClick={e => e.preventDefault()}>
             {resolve('onboardingFolderUrl')}
+          </a>
+        </div>
+
+        {/* Kit de redes */}
+        <div className="mb-6">
+          <h2 className="font-bold text-sm border-b border-gray-200 pb-1 mb-2 flex items-center gap-1.5">
+            <Link className="w-4 h-4 text-[var(--brand-primary)]" /> Kit de redes y comunicación
+          </h2>
+          <p className="text-gray-600 mb-1">Fondos, avatares y recursos de marca para tus perfiles.</p>
+          <a href="#" className="text-[var(--brand-primary)] font-medium underline" onClick={e => e.preventDefault()}>
+            {resolve('kitRedesUrl')}
           </a>
         </div>
 
         {/* Agenda */}
         <div className="mb-6">
           <h2 className="font-bold text-sm border-b border-gray-200 pb-1 mb-2 flex items-center gap-1.5">
-            <Calendar className="w-4 h-4 text-[#459CDB]" /> Agenda de los primeros días
+            <Calendar className="w-4 h-4 text-[var(--brand-primary)]" /> Agenda de los primeros días
           </h2>
           <div className="bg-gray-50 p-3 rounded border border-gray-200 space-y-3">
             <div>
               <p className="font-semibold text-xs text-gray-500 uppercase tracking-wider">Onboarding con Recursos Humanos</p>
               <p className="font-medium mt-0.5">{resolve('hrMeetingDate')}</p>
-              <a href="#" className="text-[#459CDB] text-xs underline" onClick={e => e.preventDefault()}>{resolve('hrMeetingUrl')}</a>
+              <a href="#" className="text-[var(--brand-primary)] text-xs underline" onClick={e => e.preventDefault()}>{resolve('hrMeetingUrl')}</a>
             </div>
             <div>
               <p className="font-semibold text-xs text-gray-500 uppercase tracking-wider">Primera reunión con responsable directo ({resolve('managerName')})</p>
               <p className="font-medium mt-0.5">{resolve('managerMeetingDate')}</p>
-              <a href="#" className="text-[#459CDB] text-xs underline" onClick={e => e.preventDefault()}>{resolve('managerMeetingUrl')}</a>
+              <a href="#" className="text-[var(--brand-primary)] text-xs underline" onClick={e => e.preventDefault()}>{resolve('managerMeetingUrl')}</a>
             </div>
           </div>
         </div>
@@ -187,8 +199,11 @@ export function EmailTab() {
   const { getSelectedCase, updateEmailTemplate, approveEmail, addToast } = useStore();
   const selectedCase = getSelectedCase();
   const [activeView, setActiveView] = useState<'editor' | 'preview'>('preview');
+  const [showHint, setShowHint] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const editorRef = useRef<HTMLDivElement>(null);
+  const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   if (!selectedCase) return null;
 
@@ -203,6 +218,7 @@ export function EmailTab() {
     startDate: new Date(employee.startDate).toLocaleDateString('es-AR'),
     managerName: employee.managerName || '',
     onboardingFolderUrl: emailTemplate?.onboardingFolderUrl || 'https://drive.google.com/drive/folders/demo',
+    kitRedesUrl: (emailTemplate as any)?.kitRedesUrl || 'https://drive.google.com/kit-redes-demo',
     hrMeetingDate: emailTemplate?.welcomeMeetingTime || '',
     hrMeetingUrl: emailTemplate?.welcomeMeetingLink || 'https://meet.google.com/demo',
     managerMeetingDate: emailTemplate?.managerMeetingTime || '',
@@ -253,6 +269,21 @@ export function EmailTab() {
   };
 
   useEffect(() => {
+    if (activeView === 'editor') {
+      setShowHint(true);
+      hintTimerRef.current = setTimeout(() => setShowHint(false), 3500);
+    }
+    return () => { if (hintTimerRef.current) clearTimeout(hintTimerRef.current); };
+  }, [activeView]);
+
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsFullscreen(false); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isFullscreen]);
+
+  useEffect(() => {
     if (editorRef.current && emailTemplate?.bodyHtml && activeView === 'editor') {
       // Re-hydrate variables
       const hydratedHtml = emailTemplate.bodyHtml.replace(/<span([^>]*data-variable="([^"]+)"[^>]*)>.*?<\/span>/g, (_match, attrs, varName) => {
@@ -266,7 +297,12 @@ export function EmailTab() {
   }, [emailTemplate?.bodyHtml, activeView]);
 
   return (
-    <div className="flex flex-col lg:flex-row h-full overflow-hidden -mx-4 lg:-mx-6 -my-4 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-base)]">
+    <div className={cn(
+      "flex flex-col lg:flex-row overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-base)]",
+      isFullscreen
+        ? "fixed inset-0 z-50 rounded-none border-0"
+        : "h-full -mx-4 lg:-mx-6 -my-4 rounded-lg"
+    )}>
 
       {/* ══════════════ LEFT SIDEBAR ══════════════ */}
       <div className="w-full lg:w-72 flex-shrink-0 bg-[var(--bg-subtle)] border-b lg:border-b-0 lg:border-r border-[var(--border-subtle)] flex flex-col overflow-y-auto">
@@ -322,6 +358,7 @@ export function EmailTab() {
                                 key === 'temporaryPassword' ? 'Password temporal' :
                                 key === 'managerName' ? 'Manager' :
                                 key === 'onboardingFolderUrl' ? 'Link carpeta' :
+                                key === 'kitRedesUrl' ? 'Kit de redes' :
                                 key === 'hrMeetingDate' ? 'Fecha RRHH' :
                                 key === 'hrMeetingUrl' ? 'Link RRHH' :
                                 key === 'managerMeetingDate' ? 'Fecha manager' :
@@ -373,7 +410,7 @@ export function EmailTab() {
             <button
               onClick={() => setActiveView('preview')}
               className={cn(
-                "px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
+                "px-4 py-1.5 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary-glow)]",
                 activeView === 'preview' ? "bg-[var(--brand-primary)] text-white shadow-sm" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               )}
             >
@@ -382,7 +419,7 @@ export function EmailTab() {
             <button
               onClick={() => setActiveView('editor')}
               className={cn(
-                "px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
+                "px-4 py-1.5 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary-glow)]",
                 activeView === 'editor' ? "bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm border border-[var(--border-subtle)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               )}
             >
@@ -390,7 +427,14 @@ export function EmailTab() {
             </button>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsFullscreen(f => !f)}
+              className="p-2 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary-glow)]"
+              aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+            >
+              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
             {isApproved ? (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--status-success-subtle)] text-[var(--status-success)] rounded-lg text-sm font-bold border border-[var(--status-success)]/20">
                 <Check className="w-4 h-4" />
@@ -424,10 +468,23 @@ export function EmailTab() {
                 <h3 className="text-lg font-bold text-[var(--text-primary)]">Mensaje editable</h3>
                 <p className="text-sm text-[var(--text-secondary)]">Este contenido es el cuerpo interno del email. Las credenciales, agenda y enlaces se completan automáticamente.</p>
                 {!isApproved && (
-                  <p className="text-xs text-[var(--status-info)] mt-2 flex items-center gap-1.5 bg-[var(--status-info-subtle)] p-2 rounded border border-[var(--status-info)]/20">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    Hacé clic en los chips de la barra lateral para insertar variables en el cursor.
-                  </p>
+                  <div className="mt-2 flex items-center h-9">
+                    {showHint ? (
+                      <p className="text-xs text-[var(--status-info)] flex items-center gap-1.5 bg-[var(--status-info-subtle)] p-2 rounded border border-[var(--status-info)]/20 transition-opacity duration-500">
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                        Hacé clic en los chips de la barra lateral para insertar variables en el cursor.
+                      </p>
+                    ) : (
+                      <button
+                        onClick={() => setShowHint(true)}
+                        className="text-[var(--status-info)] hover:opacity-80 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary-glow)] rounded"
+                        title="Hacé clic en los chips de la barra lateral para insertar variables en el cursor."
+                        aria-label="Ver instrucciones del editor"
+                      >
+                        <AlertCircle className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
 

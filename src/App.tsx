@@ -6,14 +6,14 @@ import { CaseList } from './components/rrhh/CaseList';
 import { CaseDetail } from './components/rrhh/CaseDetail';
 import { CandidatePanel } from './components/candidate/CandidatePanel';
 import { ToastContainer } from './components/ui/Toast';
-import { PenTool, ChevronRight, ChevronLeft } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { cn } from './utils/cn';
 
 export default function App() {
-  const { seedDemo, cases, isAutoRunning, getSelectedCase } = useStore();
-  const [, forceUpdate] = useState(0);
+  const { seedDemo, isAutoRunning, getSelectedCase } = useStore();
   const [candidateToken, setCandidateToken] = useState<string | null>(null);
   const [mobilePanel, setMobilePanel] = useState<'rrhh' | 'candidato'>('rrhh');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Parse hash for candidate token and demo mode
   useEffect(() => {
@@ -32,19 +32,11 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  // Seed demo data on first load
+  // Seed demo data on first load — read fresh state to avoid stale closure in StrictMode
   useEffect(() => {
-    if (cases.length === 0) {
+    if (useStore.getState().cases.length === 0) {
       seedDemo();
     }
-  }, []);
-
-  // Force re-render frequently for real-time sync
-  useEffect(() => {
-    const interval = setInterval(() => {
-      forceUpdate(n => n + 1);
-    }, 500);
-    return () => clearInterval(interval);
   }, []);
 
   const selectedCase = getSelectedCase();
@@ -61,10 +53,6 @@ export default function App() {
     }
     prevStatusRef.current = currentStatus ?? null;
   }, [selectedCase?.status]);
-
-  const candidateIsWriting = selectedCase?.status === 'candidate_invited' &&
-    selectedCase.candidateData && selectedCase.candidateData.currentStep > 1 &&
-    !selectedCase.candidateData.submittedAt;
 
   // Show split-screen ONLY if candidate token is active, or auto-running, or if hash contains "demo"
   const showSplitScreen = isAutoRunning || !!candidateToken || window.location.hash.includes('demo');
@@ -90,43 +78,25 @@ export default function App() {
           // On desktop: if split screen is enabled, it takes 1/2 width. Otherwise, it takes full width (w-full).
           showSplitScreen ? 'lg:flex lg:w-1/2' : 'lg:flex lg:w-full'
         )}>
-          {/* Sub-header of the panel */}
-          <div className="px-4 py-2 bg-[var(--bg-surface)] border-b border-[var(--border-subtle)] flex items-center justify-between flex-shrink-0 h-11">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[var(--brand-primary-subtle)] text-[11px] font-semibold text-[var(--brand-primary)] tracking-[0.06em] uppercase">
-              Panel de RRHH
-            </span>
-            <div className="flex items-center gap-3">
-              {candidateIsWriting && (
-                <span className="inline-flex items-center gap-1.5 text-xs text-[var(--status-info)] animate-pulse">
-                  <PenTool className="w-3.5 h-3.5" />
-                  Candidato escribiendo…
-                </span>
-              )}
-              {showSplitScreen && (
-                <button
-                  onClick={() => setMobilePanel('candidato')}
-                  className="lg:hidden inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand-primary)] bg-[var(--brand-primary-subtle)] px-3 py-1.5 rounded-full hover:opacity-90 transition-opacity min-h-[36px]"
-                  aria-label="Ver panel de candidato"
-                >
-                  <span>Candidato</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          </div>
           {/* Inner layout: sidebar cases + detail */}
           <div className="flex-1 flex min-h-0 overflow-hidden">
             <div className={cn(
-              "w-full md:w-64 lg:w-[260px] border-r border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex-shrink-0 overflow-hidden flex flex-col",
-              selectedCase ? "hidden md:flex" : "flex"
+              "border-r border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex-shrink-0 overflow-hidden flex flex-col",
+              selectedCase ? "hidden" : "flex w-full",
+              !selectedCase || sidebarOpen ? "md:flex md:w-64 lg:w-[260px]" : "md:hidden"
             )}>
-              <CaseList />
+              <CaseList onCollapse={() => setSidebarOpen(false)} />
             </div>
             <div className={cn(
               "flex-1 flex flex-col min-w-0 bg-[var(--bg-base)]",
               selectedCase ? "flex" : "hidden md:flex"
             )}>
-              <CaseDetail />
+              <CaseDetail
+                showCandidatePanel={showSplitScreen}
+                onShowCandidatePanel={() => setMobilePanel('candidato')}
+                sidebarOpen={sidebarOpen}
+                onToggleSidebar={() => setSidebarOpen(o => !o)}
+              />
             </div>
           </div>
         </div>
