@@ -70,6 +70,8 @@ npm run dev
 | [GitLab Workflow](docs/guides/gitlab-workflow.md) | Cómo usar GitLab en este proyecto |
 | [Development Setup](docs/guides/development-setup.md) | Configuración del entorno de desarrollo |
 
+> **Nota**: La integración de CI con OpenCode está activa. Cada MR recibirá una revisión automática.
+
 ## 🔄 Flujo de Trabajo
 
 1. **Issues**: Crear issue para cada tarea/bug/feature
