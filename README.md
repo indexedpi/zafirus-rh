@@ -29,6 +29,10 @@ Sistema que reemplaza el trabajo manual de RRHH en procesos de onboarding. Actua
 
 ```
 RH/
+├── src/                 # Demo React/Vite de onboarding
+├── public/              # Assets estáticos de la demo
+├── index.html           # Entrada Vite
+├── package.json         # Scripts y dependencias de la demo
 ├── docs/
 │   ├── specs/          # Especificaciones técnicas (fuente de verdad)
 │   ├── guides/         # Guías de desarrollo y workflows
