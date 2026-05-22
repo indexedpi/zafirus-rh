@@ -1,63 +1,30 @@
 stages:
   - review
-  - test
-  - build
-  - deploy
 
 # GitLab Code Review with OpenCode (qwen 3.6 plus free)
-# Runs automatically on Merge Requests
-include:
-  - component: gitlab.com/nagyv/gitlab-opencode/opencode@1.0.137
-    inputs:
-      config_dir: ${CI_PROJECT_DIR}/opencode-config
-      auth_json: $OPENCODE_AUTH_JSON
-      command: "code-review"
-      message: |
-        Review this Merge Request for code quality, architecture, testing, security, and conventions.
-        
-        Focus on:
-        1. Critical issues that must be fixed
-        2. Suggestions for improvement
-        3. Positive feedback
-        
-        Project: Zafirus Onboarding System
-        Stack: React 18 + Vite + TypeScript + Tailwind CSS
-        Design: Zafiro blue (#549dd6), dark theme, Sora font
-        
-        Provide your review in markdown format.
-      job_prefix: "review"
-      stage: review
-      after_script:
-        - |
-          echo "=== Code Review Complete ==="
-          cat opencode-review.out
-          
-          # Post review as MR comment if glab is available
-          if command -v glab &> /dev/null && [ -n "$CI_MERGE_REQUEST_IID" ]; then
-            echo "Posting review to MR #$CI_MERGE_REQUEST_IID..."
-            glab mr note $CI_MERGE_REQUEST_IID --message "$(cat opencode-review.out)" 2>/dev/null || echo "Note: Could not post to MR (check permissions)"
-          fi
-    rules:
-      - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-
-# Placeholder stages for future CI
-test:
-  stage: test
+# Uses the gitlab-opencode Docker image directly to avoid component resolution issues
+review:
+  stage: review
+  image: registry.gitlab.com/nagyv/gitlab-opencode:1.0.137
   script:
-    - echo "Tests will be added here"
+    - echo "Setting up OpenCode auth"
+    - mkdir -p ~/.local/share/opencode
+    - ln -sf $OPENCODE_AUTH_JSON ~/.local/share/opencode/auth.json
+    - echo "Running code review..."
+    - opencode run --format json --command "code-review" "Review this Merge Request for code quality, architecture, testing, security, and conventions. Project: Zafirus Onboarding System. Stack: React 18 + Vite + TypeScript + Tailwind CSS. Design: Zafiro blue (#549dd6), dark theme, Sora font." > opencode-review.jsonl
+    - /app/scripts/process_opencode_output.sh opencode-review.jsonl > opencode-review.out
+    - cat opencode-review.out
+  after_script:
+    - |
+      echo "=== Code Review Complete ==="
+      if command -v glab &> /dev/null && [ -n "$CI_MERGE_REQUEST_IID" ]; then
+        echo "Posting review to MR #$CI_MERGE_REQUEST_IID..."
+        glab mr note $CI_MERGE_REQUEST_IID --message "$(cat opencode-review.out)" 2>/dev/null || echo "Note: Could not post to MR"
+      fi
+  artifacts:
+    when: always
+    paths:
+      - opencode-review.jsonl
+      - opencode-review.out
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-
-build:
-  stage: build
-  script:
-    - echo "Build will be added here"
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-
-deploy:
-  stage: deploy
-  script:
-    - echo "Deploy will be added here"
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
