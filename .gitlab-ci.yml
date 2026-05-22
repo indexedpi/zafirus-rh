@@ -5,6 +5,7 @@ stages:
   - deploy
 
 # GitLab Code Review with OpenCode (qwen 3.6 plus free)
+# Runs automatically on Merge Requests
 include:
   - component: gitlab.com/nagyv/gitlab-opencode/opencode@1.0.137
     inputs:
@@ -38,15 +39,6 @@ include:
           fi
     rules:
       - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-
-# Optional: Manual code review trigger
-review:manual:
-  extends: .review:run
-  variables:
-    job_prefix: "review-manual"
-  rules:
-    - when: manual
-      allow_failure: true
 
 # Placeholder stages for future CI
 test:
