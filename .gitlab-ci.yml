@@ -7,17 +7,22 @@ review:
   before_script:
     - apk add --no-cache curl jq git
   script:
-    # Extract API key from the auth JSON variable (GitLab file-type variable)
-    - export OPENCODE_API_KEY=$(jq -r '.["opencode"].apiKey' "$OPENCODE_AUTH_JSON")
-
-    # Get the diff between source and target branch
-    - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
-    - git diff origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME...$CI_COMMIT_SHA -- . > mr-diff.patch
-    - echo "=== Diff being reviewed ==="
-    - head -200 mr-diff.patch
-
-    # Build JSON payload safely with jq (--rawfile avoids shell escaping issues)
     - |
+      set -eu
+
+      echo "Extracting OpenCode API key"
+      OPENCODE_API_KEY="$(jq -r '.["opencode"].apiKey' "$OPENCODE_AUTH_JSON")"
+
+      echo "Fetching target branch"
+      git fetch origin "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+
+      echo "Building MR diff"
+      git diff "origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME...$CI_COMMIT_SHA" -- . > mr-diff.patch
+
+      echo "=== Diff being reviewed ==="
+      head -200 mr-diff.patch || true
+
+      echo "Building OpenCode Zen payload"
       jq -n --rawfile diff mr-diff.patch '{
         "model": "deepseek-v4-flash-free",
         "temperature": 0.7,
@@ -33,34 +38,29 @@ review:
         ]
       }' > payload.json
 
-    # Call OpenCode Zen API
-    - |
+      echo "Calling OpenCode Zen API"
       curl -s https://zen.opencode.ai/v1/chat/completions \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $OPENCODE_API_KEY" \
         -d @payload.json > review-response.json
 
-    # Extract and display the review
-    - jq -r '.choices[0].message.content // "ERROR: No se pudo generar review"' review-response.json > review.txt
-    - echo ""
-    - echo "============================================"
-    - echo "        ☕ CODE REVIEW — ROAST MODE ON"
-    - echo "============================================"
-    - cat review.txt
-    - echo ""
-    - echo "============================================"
+      jq -r '.choices[0].message.content // "ERROR: No se pudo generar review"' review-response.json > review.txt
 
-    # Fail the pipeline if the review says RECHAZADO or CRITICAL issues exist
-    - |
+      echo ""
+      echo "============================================"
+      echo "        ☕ CODE REVIEW — ROAST MODE ON"
+      echo "============================================"
+      cat review.txt
+      echo ""
+      echo "============================================"
+
       if grep -qi "❌ RECHAZADO\|🔴 CRITICAL" review.txt; then
         echo ""
         echo "❌❌❌ REVIEW FALLÓ — No se puede mergear esto sin arreglar"
         exit 1
       fi
 
-    # Print success
-    - echo "✅ REVIEW OK — Merge podés hacer, pero con cuidado"
-
+      echo "✅ REVIEW OK — Merge podés hacer, pero con cuidado"
   artifacts:
     when: always
     paths:
