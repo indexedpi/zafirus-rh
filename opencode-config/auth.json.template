@@ -1,0 +1,11 @@
+{
+  "opencode": {
+    "providers": {
+      "opencode": {
+        "model": "qwen3.6-plus-free",
+        "baseUrl": "https://zen.opencode.ai/v1",
+        "apiKey": "$OPENCODE_API_KEY"
+      }
+    }
+  }
+}
