@@ -29,6 +29,10 @@ Sistema que reemplaza el trabajo manual de RRHH en procesos de onboarding. Actua
 
 ```
 RH/
+├── src/                 # Demo React/Vite de onboarding
+├── public/              # Assets estáticos de la demo
+├── index.html           # Entrada Vite
+├── package.json         # Scripts y dependencias de la demo
 ├── docs/
 │   ├── specs/          # Especificaciones técnicas (fuente de verdad)
 │   ├── guides/         # Guías de desarrollo y workflows
@@ -69,6 +73,8 @@ npm run dev
 | [SPEC_INDEX.md](docs/specs/SPEC_INDEX.md) | Índice de todas las especificaciones |
 | [GitLab Workflow](docs/guides/gitlab-workflow.md) | Cómo usar GitLab en este proyecto |
 | [Development Setup](docs/guides/development-setup.md) | Configuración del entorno de desarrollo |
+
+> **Nota**: La integración de CI con OpenCode está activa. Cada MR recibirá una revisión automática.
 
 ## 🔄 Flujo de Trabajo
 

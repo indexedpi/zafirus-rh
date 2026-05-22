@@ -1,63 +1,91 @@
 stages:
   - review
-  - test
-  - build
-  - deploy
 
-# GitLab Code Review with OpenCode (qwen 3.6 plus free)
-# Runs automatically on Merge Requests
-include:
-  - component: gitlab.com/nagyv/gitlab-opencode/opencode@1.0.137
-    inputs:
-      config_dir: ${CI_PROJECT_DIR}/opencode-config
-      auth_json: $OPENCODE_AUTH_JSON
-      command: "code-review"
-      message: |
-        Review this Merge Request for code quality, architecture, testing, security, and conventions.
-        
-        Focus on:
-        1. Critical issues that must be fixed
-        2. Suggestions for improvement
-        3. Positive feedback
-        
-        Project: Zafirus Onboarding System
-        Stack: React 18 + Vite + TypeScript + Tailwind CSS
-        Design: Zafiro blue (#549dd6), dark theme, Sora font
-        
-        Provide your review in markdown format.
-      job_prefix: "review"
-      stage: review
-      after_script:
-        - |
-          echo "=== Code Review Complete ==="
-          cat opencode-review.out
-          
-          # Post review as MR comment if glab is available
-          if command -v glab &> /dev/null && [ -n "$CI_MERGE_REQUEST_IID" ]; then
-            echo "Posting review to MR #$CI_MERGE_REQUEST_IID..."
-            glab mr note $CI_MERGE_REQUEST_IID --message "$(cat opencode-review.out)" 2>/dev/null || echo "Note: Could not post to MR (check permissions)"
-          fi
-    rules:
-      - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-
-# Placeholder stages for future CI
-test:
-  stage: test
+review:
+  stage: review
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl jq git
   script:
-    - echo "Tests will be added here"
+    - |
+      set -eu
+
+      echo "Extracting OpenCode API key"
+      if [ -f "$OPENCODE_AUTH_JSON" ]; then
+        OPENCODE_API_KEY="$(jq -r '.opencode.providers.opencode.apiKey // .opencode.apiKey' "$OPENCODE_AUTH_JSON")"
+        OPENCODE_BASE_URL="$(jq -r '.opencode.providers.opencode.baseUrl // .opencode.baseUrl // "https://api.opencode.ai/v1"' "$OPENCODE_AUTH_JSON")"
+      else
+        OPENCODE_API_KEY="$(printf '%s' "$OPENCODE_AUTH_JSON" | jq -r '.opencode.providers.opencode.apiKey // .opencode.apiKey')"
+        OPENCODE_BASE_URL="$(printf '%s' "$OPENCODE_AUTH_JSON" | jq -r '.opencode.providers.opencode.baseUrl // .opencode.baseUrl // "https://api.opencode.ai/v1"')"
+      fi
+      if echo "$OPENCODE_BASE_URL" | grep -q 'zen.opencode.ai'; then
+        OPENCODE_BASE_URL="https://api.opencode.ai/v1"
+      fi
+
+      echo "Fetching target branch"
+      git fetch origin "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+
+      echo "Building MR diff"
+      git diff "origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME...$CI_COMMIT_SHA" -- . > mr-diff.patch
+
+      echo "MR diff captured for review"
+
+      echo "Building OpenCode Zen payload"
+      jq -n --rawfile diff mr-diff.patch '{
+        "model": "deepseek-v4-flash-free",
+        "temperature": 0.7,
+        "messages": [
+          {
+            "role": "system",
+            "content": "Sos un code reviewer SR con 20 años de experiencia que vio TODO. Tu estilo es IRÓNICO y SARCASTICO, pero siempre con razón técnica. Detectás boludeces, code smells, bugs, agujeros de seguridad, malas prácticas, y código que parece hecho por un trainee después de 3 Red Bulls. NO insultás gratuitamente — cada comentario tiene fundamento técnico. Tu objetivo es que NO se mergee nada peligroso o mal hecho. Clasificás tus hallazgos como: 🔴 CRITICAL (explota en prod), 🟡 WARNING (huele mal), ⚪ SUGGESTION (se puede mejorar). Al final, ponés un veredicto: ✅ APROBADO, ❌ RECHAZADO, o ⚠️ CAMBIOS REQUERIDOS."
+          },
+          {
+            "role": "user",
+            "content": "Revisá este diff del MR y decime si lo mergeamos o lo quemamos con todo incluido:\n\n\($diff)"
+          }
+        ]
+      }' > payload.json
+
+      echo "Calling OpenCode API"
+      HTTP_STATUS="$(curl -s -w '%{http_code}' -o review-response.json "${OPENCODE_BASE_URL%/}/chat/completions" \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $OPENCODE_API_KEY" \
+        -d @payload.json)"
+
+      if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
+        echo "ERROR: OpenCode API returned HTTP $HTTP_STATUS" > review.txt
+        cat review.txt
+        exit 1
+      fi
+
+      if jq -e '.choices[0].message.content' review-response.json >/dev/null 2>&1; then
+        jq -r '.choices[0].message.content' review-response.json > review.txt
+      else
+        echo "ERROR: OpenCode API did not return an OpenAI-compatible chat/completions response." > review.txt
+        echo "Response shape:" >> review.txt
+        jq 'type' review-response.json >> review.txt 2>/dev/null || echo "non-json-response" >> review.txt
+        cat review.txt
+        exit 1
+      fi
+
+      echo ""
+      echo "============================================"
+      echo "        ☕ CODE REVIEW — ROAST MODE ON"
+      echo "============================================"
+      cat review.txt
+      echo ""
+      echo "============================================"
+
+      if grep -qi "❌ RECHAZADO\|🔴 CRITICAL" review.txt; then
+        echo ""
+        echo "❌❌❌ REVIEW FALLÓ — No se puede mergear esto sin arreglar"
+        exit 1
+      fi
+
+      echo "✅ REVIEW OK — Merge podés hacer, pero con cuidado"
+  artifacts:
+    when: always
+    paths:
+      - review.txt
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-
-build:
-  stage: build
-  script:
-    - echo "Build will be added here"
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-
-deploy:
-  stage: deploy
-  script:
-    - echo "Deploy will be added here"
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
