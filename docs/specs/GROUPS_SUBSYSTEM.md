@@ -1,3 +1,5 @@
+> Legacy note: this file predates the Phase 7 design constitution. Current canonical design rules live in /DESIGN.md.
+
 # GROUPS_SUBSYSTEM.md
 # Subsistema de grupos de Google Workspace
 

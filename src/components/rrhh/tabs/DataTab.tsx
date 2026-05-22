@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../../../store';
 import { Button } from '../../ui/Button';
-import { ZafirusLogo } from '../../ui/ZafirusLogo';
 import {
   Copy,
   ExternalLink,
@@ -30,7 +29,7 @@ interface SectionHeaderProps {
 function SectionHeader({ icon: Icon, title, accentToken }: SectionHeaderProps) {
   return (
     <div className="border-b border-[var(--border-subtle)] pb-2.5 mb-4">
-      {/* Visual constraint: border-l (1px) instead of border-l-2 */}
+
       <div className="flex items-center gap-2.5 pl-2.5 border-l" style={{ borderLeftColor: `var(${accentToken})` }}>
         <Icon className="w-4 h-4 text-[var(--text-secondary)]" aria-hidden="true" />
         <h4 className="text-xs font-bold tracking-wider text-[var(--text-secondary)] uppercase">
@@ -61,10 +60,12 @@ function EditableField({
   options = [],
   editingField,
   setEditingField,
-  onSave
-}: EditableFieldProps) {
+  onSave,
+  copyable = false
+}: EditableFieldProps & { copyable?: boolean }) {
   const isEditing = editingField === fieldKey;
   const [localVal, setLocalVal] = useState(value || '');
+  const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (isEditing) {
@@ -75,15 +76,32 @@ function EditableField({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      onSave(fieldKey, localVal);
+      handleSave();
     } else if (e.key === 'Escape') {
       setLocalVal(value || '');
       setEditingField(null);
     }
   };
 
+  const handleSave = () => {
+    if (localVal !== (value || '')) {
+      onSave(fieldKey, localVal);
+      setSaveStatus('Guardado');
+      setTimeout(() => setSaveStatus(null), 2000);
+    }
+    setEditingField(null);
+  };
+
   const handleBlur = () => {
-    onSave(fieldKey, localVal);
+    handleSave();
+  };
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (value) {
+      navigator.clipboard.writeText(value);
+      useStore.getState().addToast({ type: 'success', title: 'Copiado al portapapeles' });
+    }
   };
 
   if (isEditing) {
@@ -138,7 +156,7 @@ function EditableField({
   return (
     <div
       onClick={() => setEditingField(fieldKey)}
-      className="flex flex-col gap-0.5 min-w-0 cursor-pointer group p-2 hover:bg-white/[0.02] rounded-lg border border-transparent hover:border-[var(--border-subtle)] min-h-[52px] justify-center transition-[background-color,border-color] duration-150"
+      className="flex flex-col gap-0.5 min-w-0 cursor-pointer group p-2 hover:bg-white/[0.02] rounded-lg border border-transparent hover:border-[var(--border-subtle)] min-h-[52px] justify-center transition-[background-color,border-color] duration-150 focus-visible:outline-none focus-visible:border-[var(--border-focus)] focus-visible:ring-1 focus-visible:ring-[var(--brand-primary-glow)]"
       role="button"
       tabIndex={0}
       aria-label={`Editar ${label}`}
@@ -149,14 +167,34 @@ function EditableField({
         }
       }}
     >
-      <span className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider leading-none">
-        {label}
-      </span>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider leading-none">
+          {label}
+        </span>
+        {saveStatus && (
+          <span className="text-[10px] text-[var(--status-success)] font-medium animate-fade-in">
+            {saveStatus}
+          </span>
+        )}
+      </div>
       <span className="text-sm font-medium text-[var(--text-primary)] truncate flex items-center justify-between mt-1">
         <span className={cn(!value && 'text-[var(--text-disabled)] font-light', 'truncate')}>{displayValue()}</span>
-        <span className="text-[10px] text-[var(--brand-primary)] opacity-0 group-hover:opacity-100 transition-opacity duration-150 uppercase font-bold flex items-center gap-1 flex-shrink-0 pl-2">
-          editar
-        </span>
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+          {copyable && value && (
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
+              title="Copiar"
+              aria-label="Copiar valor"
+            >
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <span className="text-[10px] text-[var(--brand-primary)] uppercase font-bold pl-1">
+            editar
+          </span>
+        </div>
       </span>
     </div>
   );
@@ -240,6 +278,7 @@ interface ProfileSummaryPanelProps {
   referencesStepDone: boolean;
   w8StepDone: boolean;
   qrStepDone: boolean;
+  completionPercentage: number;
 }
 
 function ProfileSummaryPanel({
@@ -248,197 +287,110 @@ function ProfileSummaryPanel({
   fiscalStepDone,
   referencesStepDone,
   w8StepDone,
-  qrStepDone
+  qrStepDone,
+  completionPercentage
 }: ProfileSummaryPanelProps) {
-  const { status, employee, candidateData } = selectedCase;
-  const candidateSubmitted = candidateData?.submittedAt != null;
+  const { employee, candidateData } = selectedCase;
   const candidateConsolidated = candidateData?.consolidated === true;
+  const candidateSubmitted = candidateData?.submittedAt != null;
 
-  const getNextCaseActionText = () => {
-    switch (status) {
-      case 'draft': return 'Enviar formulario de invitación al candidato.';
-      case 'candidate_invited': return 'Candidato completando el formulario.';
-      case 'candidate_submitted': return 'Datos recibidos. Iniciar revisión del caso.';
-      case 'hr_review': return !candidateConsolidated ? 'Revisar y consolidar respuestas del candidato.' : 'Verificar detalles y aprobar el caso.';
-      case 'ready_to_activate': return 'Confirmar activación y configurar Workspace.';
-      case 'active_pending_automation': return 'Automatización en curso en Google Workspace.';
-      case 'operative': return 'Onboarding completado con éxito. Colaborador activo.';
-      case 'blocked': return `Resolver bloqueo: ${selectedCase.blockReason}`;
-      case 'cancelled': return 'Caso cancelado y archivado.';
-      default: return 'Sin acciones pendientes.';
-    }
-  };
+  const toReview = [];
+  const toActivate = [];
+  const ready = [];
+
+  if (employee.CUIT) {
+    ready.push('CUIT consolidado');
+  } else if (fiscalStepDone) {
+    toReview.push('CUIT declarado (pendiente consolidar)');
+  } else {
+    toActivate.push('CUIT pendiente');
+  }
+
+  if (employee.CBU) {
+    ready.push('CBU consolidado');
+  } else if (isPaymentComplete) {
+    toReview.push('CBU declarado (pendiente consolidar)');
+  } else {
+    toActivate.push('CBU pendiente');
+  }
+
+  if (referencesStepDone) {
+    ready.push('Referencias cargadas');
+  } else {
+    toActivate.push('Referencias pendientes');
+  }
+
+  const needsFiles = candidateData?.needsW8 || candidateData?.hasQrBinance;
+  const hasFiles = candidateData?.files && candidateData.files.length > 0;
+  if (!needsFiles) {
+    ready.push('Documentación validada');
+  } else if (hasFiles) {
+    toReview.push('Documentación declarada');
+  } else {
+    toActivate.push('Documentación pendiente');
+  }
+
+  if (!employee.corporateEmail) {
+    toActivate.push('Email corporativo pendiente');
+  } else {
+    ready.push('Email corporativo listo');
+  }
+
+  if (candidateConsolidated) {
+    ready.push('Datos consolidados');
+  }
 
   return (
     <div className="bg-[var(--bg-surface)] rounded-xl border border-[var(--border-default)] p-6 shadow-md">
-      <SectionHeader icon={Shield} title="Resumen del Estado del Caso" accentToken="--brand-primary" />
+      <SectionHeader icon={Shield} title="Validación de datos" accentToken="--brand-primary" />
 
-      <div className="space-y-4 text-xs">
-        {/* States widgets */}
-        <div className="space-y-2">
-          {/* Case State */}
-          <div className="flex items-center justify-between py-2 border-b border-[var(--border-subtle)]">
-            <span className="text-[var(--text-secondary)] flex items-center gap-2">
-              <Briefcase className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-              Estado del Caso
-            </span>
-            <span className="font-semibold text-[var(--text-primary)] uppercase tracking-wider">
-              {status}
-            </span>
+      <div className="space-y-6 text-xs">
+        {toReview.length > 0 && (
+          <div>
+            <h4 className="text-[11px] font-semibold text-[var(--status-warning)] uppercase tracking-wider mb-2">Faltan para revisar</h4>
+            <ul className="space-y-1.5">
+              {toReview.map((item, i) => (
+                <li key={i} className="flex items-center gap-2 text-[var(--text-primary)]">
+                  <div className="w-1 h-1 rounded-full bg-[var(--status-warning)]" />
+                  {item}
+                </li>
+              ))}
+            </ul>
           </div>
+        )}
 
-          {/* Candidate Portal State */}
-          <div className="flex items-center justify-between py-2 border-b border-[var(--border-subtle)]">
-            <span className="text-[var(--text-secondary)] flex items-center gap-2">
-              <User className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-              Portal Candidato
-            </span>
-            <div className="flex items-center gap-1.5">
-              {candidateSubmitted ? (
-                <Check className="w-3.5 h-3.5 text-[var(--status-success)]" />
-              ) : status === 'candidate_invited' ? (
-                <Clock className="w-3.5 h-3.5 text-[var(--status-warning)]" />
-              ) : (
-                <AlertTriangle className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-              )}
-              <span className="font-medium text-[var(--text-primary)]">
-                {candidateSubmitted ? 'Enviado' : status === 'candidate_invited' ? 'Invitado' : 'Borrador'}
-              </span>
-            </div>
+        {toActivate.length > 0 && (
+          <div>
+            <h4 className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Faltan para activar</h4>
+            <ul className="space-y-1.5">
+              {toActivate.map((item, i) => (
+                <li key={i} className="flex items-center gap-2 text-[var(--text-secondary)]">
+                  <div className="w-1 h-1 rounded-full bg-[var(--text-tertiary)]" />
+                  {item}
+                </li>
+              ))}
+            </ul>
           </div>
+        )}
 
-          {/* Fiscal State */}
-          <div className="flex items-center justify-between py-2 border-b border-[var(--border-subtle)]">
-            <span className="text-[var(--text-secondary)] flex items-center gap-2">
-              <FileText className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-              Datos Fiscales
-            </span>
-            <div className="flex items-center gap-1.5">
-              {employee.CUIT ? (
-                <Check className="w-3.5 h-3.5 text-[var(--status-success)]" />
-              ) : fiscalStepDone ? (
-                <Clock className="w-3.5 h-3.5 text-[var(--status-info)]" />
-              ) : (
-                <AlertTriangle className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-              )}
-              <span className={cn('font-medium', employee.CUIT ? 'text-[var(--status-success)]' : 'text-[var(--text-tertiary)]')}>
-                {employee.CUIT ? 'Consolidado' : fiscalStepDone ? 'Declarado' : 'Falta CUIT'}
-              </span>
-            </div>
+        {ready.length > 0 && (
+          <div>
+            <h4 className="text-[11px] font-semibold text-[var(--status-success)] uppercase tracking-wider mb-2">Listo</h4>
+            <ul className="space-y-1.5">
+              {ready.map((item, i) => (
+                <li key={i} className="flex items-center gap-2 text-[var(--text-secondary)]">
+                  <Check className="w-3.5 h-3.5 text-[var(--status-success)] flex-shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
           </div>
-
-          {/* Payment State */}
-          <div className="flex items-center justify-between py-2 border-b border-[var(--border-subtle)]">
-            <span className="text-[var(--text-secondary)] flex items-center gap-2">
-              <Building className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-              Datos de Cobro
-            </span>
-            <div className="flex items-center gap-1.5">
-              {employee.CBU ? (
-                <Check className="w-3.5 h-3.5 text-[var(--status-success)]" />
-              ) : isPaymentComplete ? (
-                <Clock className="w-3.5 h-3.5 text-[var(--status-info)]" />
-              ) : (
-                <AlertTriangle className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-              )}
-              <span className={cn('font-medium', employee.CBU ? 'text-[var(--status-success)]' : 'text-[var(--text-tertiary)]')}>
-                {employee.CBU ? 'Consolidado' : isPaymentComplete ? 'Declarado' : 'Falta CBU'}
-              </span>
-            </div>
-          </div>
-
-          {/* References State */}
-          <div className="flex items-center justify-between py-2 border-b border-[var(--border-subtle)]">
-            <span className="text-[var(--text-secondary)] flex items-center gap-2">
-              <Users className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-              Referencias
-            </span>
-            <div className="flex items-center gap-1.5">
-              {referencesStepDone ? (
-                <Check className="w-3.5 h-3.5 text-[var(--status-success)]" />
-              ) : (
-                <AlertTriangle className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-              )}
-              <span className={cn('font-medium', referencesStepDone ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]')}>
-                {referencesStepDone ? `${candidateData?.references?.length || 0} Cargadas` : 'Pendiente'}
-              </span>
-            </div>
-          </div>
-
-          {/* Documents State */}
-          <div className="flex items-center justify-between py-2 border-b border-[var(--border-subtle)]">
-            <span className="text-[var(--text-secondary)] flex items-center gap-2">
-              <FileText className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-              Documentos
-            </span>
-            <div className="flex items-center gap-1.5">
-              {w8StepDone && qrStepDone ? (
-                <Check className="w-3.5 h-3.5 text-[var(--status-success)]" />
-              ) : (
-                <Clock className="w-3.5 h-3.5 text-[var(--status-warning)]" />
-              )}
-              <span className="font-medium text-[var(--text-primary)]">
-                {candidateData?.files?.length || 0} Subidos
-              </span>
-            </div>
-          </div>
-
-          {/* Consolidation State */}
-          <div className="flex items-center justify-between py-2">
-            <span className="text-[var(--text-secondary)] flex items-center gap-2">
-              <Shield className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-              Consolidación
-            </span>
-            <div className="flex items-center gap-1.5">
-              {candidateConsolidated ? (
-                <Check className="w-3.5 h-3.5 text-[var(--status-success)]" />
-              ) : (
-                <Clock className="w-3.5 h-3.5 text-[var(--status-warning)]" />
-              )}
-              <span className={cn('font-medium', candidateConsolidated ? 'text-[var(--status-success)]' : 'text-[var(--status-warning)]')}>
-                {candidateConsolidated ? 'Datos consolidados' : 'Datos sin consolidar'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Actionable alert box */}
-        <div className="mt-6 p-4 bg-[var(--bg-elevated)] rounded-lg border border-[var(--border-default)]">
-          <p className="font-bold text-[var(--text-primary)] mb-1 uppercase tracking-wider text-[10px]">
-            Próxima Acción
-          </p>
-          <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-            {getNextCaseActionText()}
-          </p>
-        </div>
+        )}
       </div>
     </div>
   );
 }
 
-// ─── INFO ROW SUBCOMPONENT ───
-export interface InfoRowProps {
-  label: string;
-  value: string;
-  highlight?: boolean;
-}
-
-export function InfoRow({ label, value, highlight }: InfoRowProps) {
-  return (
-    <div className="flex flex-col gap-0.5 min-w-0">
-      <span className="text-xs text-[var(--text-tertiary)] leading-tight">{label}</span>
-      <span className={cn(
-        'text-sm font-medium text-[var(--text-primary)] truncate',
-        highlight && 'text-[var(--brand-primary)]'
-      )}>
-        {value || '—'}
-        {highlight && <Check className="w-3 h-3 inline-block ml-1 text-[var(--status-success)]" />}
-      </span>
-    </div>
-  );
-}
-
-// ─── MAIN DATA TAB COMPONENT ───
 export function DataTab() {
   const { getSelectedCase, updateEmployee, consolidateCandidateData, sendCandidateForm, addToast } = useStore();
   const selectedCase = getSelectedCase();
@@ -454,7 +406,7 @@ export function DataTab() {
   };
 
   const handleCopyLink = () => {
-    const link = `${window.location.origin}/demo#candidate=${candidateToken}`;
+    const link = `${window.location.origin}/#candidate=${candidateToken}`;
     navigator.clipboard.writeText(link);
     addToast({ type: 'success', title: 'Enlace copiado al portapapeles' });
   };
@@ -470,7 +422,7 @@ export function DataTab() {
   const candidateSubmitted = candidateData?.submittedAt != null;
   const candidateConsolidated = candidateData?.consolidated === true;
 
-  // ─── A4. Fix payment completeness logic ───
+  // Payment completeness by selected method
   const isPaymentComplete = (() => {
     if (!candidateData) return false;
     if (candidateData.paymentMethod === 'CBU') {
@@ -517,55 +469,6 @@ export function DataTab() {
 
   return (
     <div className="space-y-6">
-      {/* ─── ProfileHero ─── */}
-      <div className="bg-[var(--bg-surface)] rounded-xl border border-[var(--border-default)] p-6 relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-sm">
-        {/* Watermark */}
-        <div className="absolute -right-8 -bottom-8 pointer-events-none opacity-5">
-          <ZafirusLogo size={200} />
-        </div>
-
-        <div className="flex items-center gap-4 z-10">
-          <div className="w-16 h-16 rounded-full bg-[var(--brand-primary-subtle)] border border-[var(--brand-primary)]/20 flex items-center justify-center text-2xl font-semibold text-[var(--brand-primary)] flex-shrink-0 select-none">
-            {employee.name?.charAt(0)}{employee.lastName?.charAt(0)}
-          </div>
-          <div className="min-w-0">
-            <h2 className="text-[22px] font-bold leading-tight text-[var(--text-primary)] truncate">
-              {employee.name} {employee.lastName}
-            </h2>
-            <p className="text-sm text-[var(--text-secondary)] mt-1 flex items-center gap-1.5 flex-wrap">
-              <span>{employee.role}</span>
-              <span className="text-[var(--text-tertiary)] font-light">|</span>
-              <span className="uppercase font-mono text-xs tracking-wider">{TEAMS.find(t => t.value === employee.team)?.label || employee.team}</span>
-              <span className="text-[var(--text-tertiary)] font-light">|</span>
-              <span className="text-xs bg-[var(--bg-elevated)] px-2 py-0.5 rounded border border-[var(--border-subtle)]">
-                {CONTRACT_TYPES.find(c => c.value === employee.contractType)?.label || employee.contractType}
-              </span>
-            </p>
-            <p className="text-xs text-[var(--text-tertiary)] mt-1.5 flex items-center gap-1 flex-wrap">
-              <MapPin className="w-3 h-3" />
-              <span>{employee.cityId || 'Sin ubicación'}, {COUNTRIES.find(c => c.code === employee.countryId)?.name || employee.countryId}</span>
-              <span className="mx-1.5 font-light">·</span>
-              <Briefcase className="w-3 h-3" />
-              <span>Inicio: {new Date(employee.startDate + 'T00:00:00').toLocaleDateString('es-AR', { dateStyle: 'medium' })}</span>
-            </p>
-          </div>
-        </div>
-
-        {/* Completeness widget */}
-        <div className="w-full md:w-48 flex-shrink-0 z-10">
-          <div className="flex justify-between text-xs font-medium mb-2">
-            <span className="text-[var(--text-secondary)] uppercase tracking-wider">Progreso del Perfil</span>
-            <span className="text-[var(--brand-primary)] font-bold">{completionPercentage}%</span>
-          </div>
-          <div className="h-2 bg-[var(--bg-elevated)] rounded-full overflow-hidden border border-[var(--border-subtle)]">
-            <div
-              className="h-full bg-[var(--brand-primary)] rounded-full transition-[width] duration-300"
-              style={{ width: `${completionPercentage}%` }}
-            />
-          </div>
-        </div>
-      </div>
-
       {/* ─── Main Split Layout ─── */}
       <div className="flex flex-col lg:flex-row items-start gap-6 relative">
         {/* Left Column (Cards) */}
@@ -582,6 +485,7 @@ export function DataTab() {
                     label="Nombre"
                     value={employee.name}
                     fieldKey="name"
+                    copyable
                     editingField={editingField}
                     setEditingField={setEditingField}
                     onSave={handleFieldSave}
@@ -590,6 +494,7 @@ export function DataTab() {
                     label="Apellido"
                     value={employee.lastName}
                     fieldKey="lastName"
+                    copyable
                     editingField={editingField}
                     setEditingField={setEditingField}
                     onSave={handleFieldSave}
@@ -598,6 +503,7 @@ export function DataTab() {
                     label="Email Personal"
                     value={employee.email}
                     fieldKey="email"
+                    copyable
                     editingField={editingField}
                     setEditingField={setEditingField}
                     onSave={handleFieldSave}
@@ -606,6 +512,7 @@ export function DataTab() {
                     label="Documento / DNI"
                     value={employee.CI}
                     fieldKey="CI"
+                    copyable
                     editingField={editingField}
                     setEditingField={setEditingField}
                     onSave={handleFieldSave}
@@ -731,6 +638,7 @@ export function DataTab() {
                     label="Email Corporativo"
                     value={employee.corporateEmail}
                     fieldKey="corporateEmail"
+                    copyable
                     editingField={editingField}
                     setEditingField={setEditingField}
                     onSave={handleFieldSave}
@@ -889,43 +797,56 @@ export function DataTab() {
 
                   <div>
                     <p className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider mb-3">
-                      Documentos Subidos ({candidateData?.files?.length || 0})
+                                            Documentación
                     </p>
-                    {candidateData?.files && candidateData.files.length > 0 ? (
+                    {(!candidateData?.needsW8 && !candidateData?.hasQrBinance) ? (
+                      <p className="text-xs text-[var(--text-tertiary)] italic font-light">No se requieren archivos adicionales para este caso.</p>
+                    ) : (candidateData?.files && candidateData.files.length > 0) ? (
                       <div className="space-y-2">
                         {candidateData.files.map((file) => (
-                          <div key={file.id} className="bg-[var(--bg-surface)] p-2.5 rounded-lg border border-[var(--border-subtle)] text-xs flex items-center justify-between">
-                            <div className="truncate max-w-[160px]">
-                              <p className="font-medium text-[var(--text-primary)] truncate">{file.name}</p>
-                              <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5 font-mono uppercase">{file.fileType}</p>
+                          <div key={file.id} className="bg-[var(--bg-surface)] p-2.5 rounded-lg border border-[var(--border-subtle)] text-xs flex flex-col gap-2">
+                            <div className="flex items-center justify-between">
+                              <div className="truncate max-w-[160px]">
+                                <p className="font-medium text-[var(--text-primary)] truncate">{file.name}</p>
+                                <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5 font-mono uppercase">{file.fileType} • {Math.round(file.sizeBytes / 1024)} KB</p>
+                              </div>
+                              <span className="text-[10px] text-[var(--status-success)] font-medium px-1.5 py-0.5 rounded bg-[var(--status-success-subtle)]">
+                                Subido
+                              </span>
                             </div>
-                            <span className="text-[10px] text-[var(--text-secondary)] bg-[var(--bg-elevated)] px-2 py-0.5 rounded border border-[var(--border-subtle)]">
-                              {Math.round(file.sizeBytes / 1024)} KB
-                            </span>
+                            <div className="flex items-center gap-2 border-t border-[var(--border-subtle)] pt-2">
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(file.name); useStore.getState().addToast({ type: 'success', title: 'Copiado al portapapeles' }); }}
+                                className="text-[10px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1 uppercase tracking-wider"
+                              >
+                                <Copy className="w-3 h-3" /> Copiar nombre
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-xs text-[var(--text-tertiary)] italic font-light">Sin documentos declarados.</p>
+                      <p className="text-xs text-[var(--status-warning)] italic font-medium">Archivos pendientes</p>
                     )}
                   </div>
                 </div>
 
-                {/* Consolidation CTA Area */}
+                                {/* Consolidation CTA Area */}
                 <div className="border-t border-[var(--border-subtle)] pt-6">
                   {!candidateConsolidated ? (
                     <div className="p-4 bg-[var(--brand-primary-subtle)] border border-[var(--brand-primary)]/20 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div>
                         <p className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-1.5">
                           <Shield className="w-4 h-4 text-[var(--brand-primary)]" />
-                          Acción Requerida: Consolidar Datos del Candidato
+                          Consolidar datos del candidato
                         </p>
                         <p className="text-xs text-[var(--text-secondary)] mt-1 max-w-md leading-relaxed">
-                          Al confirmar, se copiarán los datos declarados (CUIT, CBU) al perfil del empleado en el directorio.
+                          Esta acción copia los datos fiscales y de cobro al perfil operativo del empleado.
                         </p>
                       </div>
                       <Button onClick={handleConsolidate} className="w-full sm:w-auto min-h-[44px] flex-shrink-0 px-5">
-                        Consolidar datos del candidato →
+                        Consolidar datos del candidato
                       </Button>
                     </div>
                   ) : (
@@ -933,10 +854,10 @@ export function DataTab() {
                       <CheckCircle2 className="w-5 h-5 text-[var(--status-success)] flex-shrink-0" />
                       <div>
                         <p className="text-sm font-bold text-[var(--status-success)]">
-                          Datos consolidados con éxito
+                          Datos consolidados
                         </p>
                         <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                          Los detalles fiscales y bancarios han sido verificados e integrados al perfil oficial.
+                          CUIT • CBU / datos de cobro
                         </p>
                       </div>
                     </div>
@@ -956,6 +877,7 @@ export function DataTab() {
             referencesStepDone={referencesStepDone}
             w8StepDone={w8StepDone}
             qrStepDone={qrStepDone}
+            completionPercentage={completionPercentage}
           />
         </div>
       </div>

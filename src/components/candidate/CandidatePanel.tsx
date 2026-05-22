@@ -25,10 +25,10 @@ export function CandidatePanel({ token }: CandidatePanelProps) {
         <div className="h-full flex flex-col items-center justify-center text-center px-6 bg-[var(--bg-subtle)]">
           <CheckCircle className="w-16 h-16 text-[var(--status-success)] mb-4 animate-fade-in" />
           <h2 className="text-lg font-bold text-[var(--text-primary)] mb-2">
-            Formulario enviado con éxito
+            Formulario enviado
           </h2>
           <p className="text-sm text-[var(--text-secondary)] max-w-sm">
-            El candidato completó su declaración jurada. Los datos están disponibles para revisión en la pestaña de Datos.
+            Gracias. RRHH ya recibió tus datos.
           </p>
           {selectedCase.status === 'operative' && (
             <div className="mt-6 p-4 bg-[var(--status-success-subtle)] rounded-lg border border-[var(--status-success)]/15 max-w-sm">
@@ -55,7 +55,7 @@ export function CandidatePanel({ token }: CandidatePanelProps) {
             <Clock className="w-10 h-10 text-[var(--text-tertiary)]" />
           </div>
           <h2 className="text-lg font-bold text-[var(--text-primary)] mb-2">
-            Sin formulario activo
+            Formulario no disponible
           </h2>
           <p className="text-sm text-[var(--text-secondary)] max-w-sm">
             {selectedCase.status === 'draft'
@@ -77,10 +77,10 @@ export function CandidatePanel({ token }: CandidatePanelProps) {
             <FileText className="w-10 h-10 text-[var(--text-tertiary)]" />
           </div>
           <h2 className="text-lg font-bold text-[var(--text-primary)] mb-2">
-            Esperando formulario de ingreso…
+            Formulario no disponible
           </h2>
           <p className="text-sm text-[var(--text-secondary)] max-w-sm">
-            Seleccioná un caso en estado "Invitado" en el panel de RRHH para visualizar el portal autodeclarativo.
+            Seleccioná un caso en estado "Invitado" en Zafirus para visualizar el portal autodeclarativo.
           </p>
         </div>
       );
@@ -93,10 +93,10 @@ export function CandidatePanel({ token }: CandidatePanelProps) {
           <AlertTriangle className="w-8 h-8 text-[var(--status-warning)]" />
         </div>
         <h2 className="text-lg font-bold text-[var(--text-primary)] mb-2">
-          Enlace no disponible o expirado
+          Enlace no disponible
         </h2>
         <p className="text-sm text-[var(--text-secondary)] max-w-sm">
-          Por favor verifica que el enlace sea el correcto o contacta al equipo de personas de Zafirus.
+          Contactá al equipo de Personas de Zafirus.
         </p>
       </div>
     );

@@ -1,3 +1,5 @@
+> Legacy note: this file predates the Phase 7 design constitution. Current canonical design rules live in /DESIGN.md.
+
 # AGENTS_CONTEXT.md
 # Contexto base del proyecto — Zafirus Onboarding System
 
@@ -92,7 +94,7 @@ FIJO — NO CAMBIAR SIN AUTORIZACIÓN EXPLÍCITA:
 
 3. Branding:
    Tipografía: Sora
-   Brand primary: #549dd6
+   Brand primary: #459CDB
    Logo: https://zafirus.tech/images/zafirus-logo.svg
    Todo el dashboard: dark theme
    Área de composición de email: light (white)

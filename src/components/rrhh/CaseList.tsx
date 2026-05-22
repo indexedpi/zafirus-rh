@@ -98,7 +98,7 @@ export function CaseList() {
           <span className="text-sm font-semibold text-[var(--text-primary)]">Casos</span>
           <span className="text-xs font-medium text-[var(--text-tertiary)]">({cases.length})</span>
         </div>
-        <Button size="sm" onClick={() => setIsModalOpen(true)} className="min-h-[32px] px-2.5 text-xs" aria-label="Create new onboarding case">
+        <Button size="sm" onClick={() => setIsModalOpen(true)} className="min-h-[32px] px-2.5 text-xs" aria-label="Crear nuevo caso de onboarding">
           <Plus className="w-3.5 h-3.5" />
           <span>Nuevo</span>
         </Button>
@@ -144,7 +144,7 @@ export function CaseList() {
                       ? 'bg-[var(--brand-primary-subtle)] border-l border-l-[var(--brand-primary)] ring-1 ring-[var(--brand-primary)]/10'
                       : 'border-l border-l-transparent'
                   )}
-                  aria-label={`View onboarding case for ${c.employee.name} ${c.employee.lastName}`}
+                  aria-label={`Ver caso de onboarding de ${c.employee.name} ${c.employee.lastName}`}
                 >
                   {/* Header - Name & Pulse dot & Status badge */}
                   <div className="flex items-center justify-between w-full gap-2">
@@ -168,12 +168,7 @@ export function CaseList() {
                     <span className="truncate font-medium max-w-[140px]">
                       {c.employee.role} · <span className="uppercase font-mono text-[10px]">{team?.label || c.employee.team}</span>
                     </span>
-                    {country && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-mono bg-[var(--bg-elevated)] px-1.5 py-0.5 rounded border border-[var(--border-subtle)] flex-shrink-0">
-                        <Globe className="w-3 h-3" />
-                        <span>{country.code}</span>
-                      </span>
-                    )}
+
                   </div>
 
                   {/* Action clue & Timestamp line */}

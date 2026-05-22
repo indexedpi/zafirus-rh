@@ -1,3 +1,5 @@
+> Legacy note: this file predates the Phase 7 design constitution. Current canonical design rules live in /DESIGN.md.
+
 # PHASE2_SCOPE.md
 # Fase 2 del demo — Delta sobre `zafirus-onboarding-demo-scope`
 
@@ -224,7 +226,7 @@ Helper: "Esta elección es independiente de tu país de residencia."
 
 ### Paso 3 — Referencias (antes Step 5)
 ```
-M�nimo 1, máximo 3
+M�nimo 1, máximo 3
 Por referencia: fullName, relationship, company, email, phone
 ```
 

@@ -1,3 +1,5 @@
+> Legacy note: this file predates the Phase 7 design constitution. Current canonical design rules live in /DESIGN.md.
+
 # DESIGN_SYSTEM.md
 # Sistema de diseño unificado — Zafirus Onboarding
 
@@ -35,11 +37,11 @@ CDN:
 ### Brand
 | Token | Hex | Uso |
 |---|---|---|
-| `--brand-primary` | `#549dd6` | Acción principal, CTAs, links, iconos activos |
+| `--brand-primary` | `#459CDB` | Acción principal, CTAs, links, iconos activos |
 | `--brand-primary-hover` | `#6bb5e8` | Hover de elementos azules |
 | `--brand-primary-active` | `#3d85be` | Estado pressed/active |
-| `--brand-primary-subtle` | `rgba(84,157,214,0.10)` | Fondos de estado activo sutil |
-| `--brand-primary-glow` | `rgba(84,157,214,0.22)` | Box-shadow de foco y hover |
+| `--brand-primary-subtle` | `rgba(69,156,219,0.10)` | Fondos de estado activo sutil |
+| `--brand-primary-glow` | `rgba(69,156,219,0.22)` | Box-shadow de foco y hover |
 | `--brand-navy` | `#101d30` | Color navy principal de marca |
 
 ### Backgrounds (de más oscuro a más claro)
@@ -68,7 +70,7 @@ CDN:
 | `--border-subtle` | `rgba(255,255,255,0.05)` | Divisores muy suaves |
 | `--border-default` | `rgba(255,255,255,0.09)` | Bordes de inputs y cards en reposo |
 | `--border-strong` | `rgba(255,255,255,0.14)` | Bordes en hover |
-| `--border-focus` | `#549dd6` | Borde de foco en inputs |
+| `--border-focus` | `#459CDB` | Borde de foco en inputs |
 | `--border-error` | `#ef4444` | Borde en estado error |
 | `--border-success` | `#22c55e` | Borde en estado éxito |
 
@@ -78,14 +80,14 @@ CDN:
 | `--status-success` | `#22c55e` | Verde — validaciones positivas, estados operativos |
 | `--status-error` | `#ef4444` | Rojo — errores, alertas críticas |
 | `--status-warning` | `#f59e0b` | Ámbar — advertencias, atención requerida |
-| `--status-info` | `#549dd6` | Azul — información |
+| `--status-info` | `#459CDB` | Azul — información |
 
 ### Status subtle (para badges y backgrounds de estado)
 ```css
 --status-success-subtle: rgba(34,197,94,0.12);
 --status-error-subtle:   rgba(239,68,68,0.12);
 --status-warning-subtle: rgba(245,158,11,0.12);
---status-info-subtle:    rgba(84,157,214,0.12);
+--status-info-subtle:    rgba(69,156,219,0.12);
 ```
 
 ---
@@ -184,7 +186,7 @@ font-family: 'Sora';
 font-weight: 600;
 font-size: 14px;
 border: none;
-transition: all 150ms ease;
+transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 
 :hover {
   background: var(--brand-primary-hover);
@@ -363,7 +365,7 @@ justify-content: center;
 
 Paleta de fondos para avatares (rotativa):
 ```
-#549dd6, #8b5cf6, #f59e0b, #22c55e, #ec4899
+#459CDB, #8b5cf6, #f59e0b, #22c55e, #ec4899
 ```
 
 ### 7.6 Timeline / Activity log
@@ -524,11 +526,11 @@ margin: 0 auto
 --ease-standard:     cubic-bezier(0.4, 0, 0.2, 1);
 --ease-out:          cubic-bezier(0, 0, 0.2, 1);
 --ease-in:           cubic-bezier(0.4, 0, 1, 1);
---ease-spring:       cubic-bezier(0.34, 1.56, 0.64, 1);
+
 ```
 
 Patrones recomendados:
-- Hover de elementos interactivos: `transition: all 150ms ease`
+- Hover de elementos interactivos: `transition: background-color 150ms ease`
 - Aparición de toasts: slide-in desde abajo, 200ms, ease-out
 - Cambio de estado de badge: fade rápido, 150ms
 - Apertura de drawer: 300ms, ease-standard
@@ -678,7 +680,7 @@ module.exports = {
       },
       colors: {
         brand: {
-          primary: '#549dd6',
+          primary: '#459CDB',
           'primary-hover': '#6bb5e8',
           'primary-active': '#3d85be',
           navy: '#101d30',
@@ -693,7 +695,7 @@ module.exports = {
           success: '#22c55e',
           error: '#ef4444',
           warning: '#f59e0b',
-          info: '#549dd6',
+          info: '#459CDB',
         },
       },
       borderRadius: {
@@ -703,7 +705,7 @@ module.exports = {
         xl: '16px',
       },
       boxShadow: {
-        glow: '0 0 0 3px rgba(84,157,214,0.22)',
+        glow: '0 0 0 3px rgba(69,156,219,0.22)',
       },
     },
   },
@@ -718,11 +720,11 @@ CSS global (`styles.css`):
 
 :root {
   /* Brand */
-  --brand-primary: #549dd6;
+  --brand-primary: #459CDB;
   --brand-primary-hover: #6bb5e8;
   --brand-primary-active: #3d85be;
-  --brand-primary-subtle: rgba(84,157,214,0.10);
-  --brand-primary-glow: rgba(84,157,214,0.22);
+  --brand-primary-subtle: rgba(69,156,219,0.10);
+  --brand-primary-glow: rgba(69,156,219,0.22);
   --brand-navy: #101d30;
 
   /* Backgrounds */
@@ -745,7 +747,7 @@ CSS global (`styles.css`):
   --border-subtle: rgba(255,255,255,0.05);
   --border-default: rgba(255,255,255,0.09);
   --border-strong: rgba(255,255,255,0.14);
-  --border-focus: #549dd6;
+  --border-focus: #459CDB;
   --border-error: #ef4444;
   --border-success: #22c55e;
 
@@ -753,12 +755,12 @@ CSS global (`styles.css`):
   --status-success: #22c55e;
   --status-error: #ef4444;
   --status-warning: #f59e0b;
-  --status-info: #549dd6;
+  --status-info: #459CDB;
 
   --status-success-subtle: rgba(34,197,94,0.12);
   --status-error-subtle: rgba(239,68,68,0.12);
   --status-warning-subtle: rgba(245,158,11,0.12);
-  --status-info-subtle: rgba(84,157,214,0.12);
+  --status-info-subtle: rgba(69,156,219,0.12);
 }
 
 html, body {

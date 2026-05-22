@@ -1,3 +1,5 @@
+> Legacy note: this file predates the Phase 7 design constitution. Current canonical design rules live in /DESIGN.md.
+
 # EMAIL_EDITOR_SPEC.md
 # Editor de email de bienvenida — Especificación completa UX/UI
 

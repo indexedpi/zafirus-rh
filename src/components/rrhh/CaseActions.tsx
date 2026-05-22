@@ -49,7 +49,7 @@ export function CaseActions() {
 
   const handleCorrection = () => {
     if (!correctionNote.trim()) {
-      addToast({ type: 'warning', title: 'Please specify the correction details.' });
+      addToast({ type: 'warning', title: 'Indicá el motivo de la corrección.' });
       return;
     }
     requestCorrection(id, correctionNote);
@@ -67,7 +67,7 @@ export function CaseActions() {
 
   const handleBlock = () => {
     if (!blockReason.trim()) {
-      addToast({ type: 'warning', title: 'Please specify the block reason.' });
+      addToast({ type: 'warning', title: 'Indicá el motivo del bloqueo.' });
       return;
     }
     block(id, blockReason);
@@ -79,8 +79,8 @@ export function CaseActions() {
     unblock(id);
   };
 
-  const handleCancel = () => {
-    if (confirm('Are you sure you want to cancel this onboarding case? This action is irreversible.')) {
+  const handleCancelar = () => {
+    if (confirm('¿Seguro que querés cancelar este caso? Esta acción no se puede deshacer.')) {
       cancel(id);
     }
   };
@@ -90,29 +90,29 @@ export function CaseActions() {
       <div className="px-4 lg:px-6 py-4 border-t border-[var(--border-subtle)] bg-[var(--bg-subtle)] safe-bottom">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="text-xs text-[var(--text-tertiary)] hidden lg:block">
-            {status === 'draft' && 'Onboarding case is in draft. Send the form to candidate to continue.'}
-            {status === 'candidate_invited' && 'Form dispatched. Awaiting candidate input.'}
-            {status === 'candidate_submitted' && 'Candidate has submitted form data. Ready to review.'}
-            {status === 'hr_review' && 'Review candidate details and approve, request correction, or block.'}
-            {status === 'ready_to_activate' && 'Profile verified. Case ready for operational activation.'}
-            {status === 'active_pending_automation' && 'Automated directory and access tasks in progress...'}
-            {status === 'operative' && 'Onboarding completed successfully! Employee is active.'}
-            {status === 'blocked' && `Blocked: ${selectedCase.blockReason || 'No reason specified'}`}
-            {status === 'cancelled' && 'This onboarding case is cancelled.'}
+            {status === 'draft' && 'El caso está en borrador. Enviá el formulario al candidato para continuar.'}
+            {status === 'candidate_invited' && 'Formulario enviado. Esperando respuesta del candidato.'}
+            {status === 'candidate_submitted' && 'El candidato envió sus datos. Listo para revisión.'}
+            {status === 'hr_review' && 'Revisá los detalles del candidato y aprobá, solicitá corrección o bloqueá el caso.'}
+            {status === 'ready_to_activate' && 'Perfil verificado. El caso está listo para activación operativa.'}
+            {status === 'active_pending_automation' && 'Tareas automáticas de directorio y accesos en curso...'}
+            {status === 'operative' && 'Onboarding completado. El colaborador está activo.'}
+            {status === 'blocked' && `Bloqueado: ${selectedCase.blockReason || 'Sin motivo especificado'}`}
+            {status === 'cancelled' && 'Este caso fue cancelado.'}
           </div>
 
           <div className="flex items-center gap-2 lg:gap-3 flex-wrap">
             {status === 'draft' && (
               <Button onClick={handleSendForm} className="min-h-[44px]">
                 <Send className="w-4 h-4" />
-                Send Form to Candidate
+                Enviar formulario
               </Button>
             )}
 
             {status === 'candidate_submitted' && (
               <Button onClick={handleStartReview} className="min-h-[44px]">
                 <ArrowRight className="w-4 h-4" />
-                Start Review
+                Iniciar revisión
               </Button>
             )}
 
@@ -120,15 +120,15 @@ export function CaseActions() {
               <>
                 <Button variant="ghost" onClick={() => setShowBlockModal(true)} className="min-h-[44px]">
                   <Lock className="w-4 h-4" />
-                  Block Case
+                  Bloquear caso
                 </Button>
                 <Button variant="secondary" onClick={() => setShowCorrectionModal(true)} className="min-h-[44px]">
                   <MessageSquare className="w-4 h-4" />
-                  Request Correction
+                  Solicitar corrección
                 </Button>
                 <Button onClick={handleApprove} className="min-h-[44px]">
                   <Check className="w-4 h-4" />
-                  Approve Case
+                  Aprobar caso
                 </Button>
               </>
             )}
@@ -136,27 +136,27 @@ export function CaseActions() {
             {status === 'ready_to_activate' && (
               <Button onClick={handleActivate} className="min-h-[44px]">
                 <Play className="w-4 h-4" />
-                Activate Onboarding
+                Activar onboarding
               </Button>
             )}
 
             {status === 'blocked' && (
               <>
-                <Button variant="danger" size="sm" onClick={handleCancel} className="min-h-[44px]">
+                <Button variant="danger" size="sm" onClick={handleCancelar} className="min-h-[44px]">
                   <XCircle className="w-4 h-4" />
-                  Cancel Case
+                  Cancelar caso
                 </Button>
                 <Button onClick={handleUnblock} className="min-h-[44px]">
                   <Unlock className="w-4 h-4" />
-                  Unblock Case
+                  Desbloquear caso
                 </Button>
               </>
             )}
 
             {(status === 'draft' || status === 'candidate_invited' || status === 'hr_review') && (
-              <Button variant="ghost" size="sm" onClick={handleCancel} className="min-h-[44px]">
+              <Button variant="ghost" size="sm" onClick={handleCancelar} className="min-h-[44px]">
                 <XCircle className="w-4 h-4" />
-                Cancel File
+                Cancelar caso
               </Button>
             )}
           </div>
@@ -167,26 +167,26 @@ export function CaseActions() {
       <Modal
         isOpen={showCorrectionModal}
         onClose={() => setShowCorrectionModal(false)}
-        title="Request Onboarding Correction"
+        title="Solicitar corrección de onboarding"
       >
         <div className="space-y-4">
           <p className="text-sm text-[var(--text-secondary)]">
-            A correction request notification will be dispatched to the candidate with this comment:
+            Se enviará una solicitud de corrección al candidato con este comentario:
           </p>
           <Textarea
-            label="Correction Reason"
+            label="Motivo de corrección"
             value={correctionNote}
             onChange={(e) => setCorrectionNote(e.target.value)}
-            placeholder="e.g., CUIT number digit is invalid, please re-upload document..."
+            placeholder="Ej.: el número de CUIT tiene un dígito inválido, por favor volvé a cargar el documento..."
             rows={4}
           />
           <div className="flex justify-end gap-3">
             <Button variant="secondary" onClick={() => setShowCorrectionModal(false)} className="min-h-[44px]">
-              Cancel
+              Cancelar
             </Button>
             <Button onClick={handleCorrection} className="min-h-[44px]">
               <AlertTriangle className="w-4 h-4" />
-              Send Request
+              Enviar solicitud
             </Button>
           </div>
         </div>
@@ -196,26 +196,26 @@ export function CaseActions() {
       <Modal
         isOpen={showBlockModal}
         onClose={() => setShowBlockModal(false)}
-        title="Block Onboarding Case"
+        title="Bloquear caso de onboarding"
       >
         <div className="space-y-4">
           <p className="text-sm text-[var(--text-secondary)]">
-            The onboarding file will be marked as Blocked until manual clearance is granted by an operator.
+            El caso quedará bloqueado hasta que un operador lo desbloquee manualmente.
           </p>
           <Textarea
-            label="Blocking Reason"
+            label="Motivo del bloqueo"
             value={blockReason}
             onChange={(e) => setBlockReason(e.target.value)}
-            placeholder="e.g., Background check pending or ID documents unreadable..."
+            placeholder="Ej.: verificación pendiente o documentación ilegible..."
             rows={4}
           />
           <div className="flex justify-end gap-3">
             <Button variant="secondary" onClick={() => setShowBlockModal(false)} className="min-h-[44px]">
-              Cancel
+              Cancelar
             </Button>
             <Button variant="danger" onClick={handleBlock} className="min-h-[44px]">
               <Lock className="w-4 h-4" />
-              Block File
+              Bloquear caso
             </Button>
           </div>
         </div>

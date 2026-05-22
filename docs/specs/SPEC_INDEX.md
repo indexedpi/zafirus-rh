@@ -1,3 +1,5 @@
+> Legacy note: this file predates the Phase 7 design constitution. Current canonical design rules live in /DESIGN.md.
+
 # SPEC_INDEX.md
 # Índice de Especificaciones — Zafirus Onboarding System
 
