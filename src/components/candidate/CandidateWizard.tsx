@@ -3,7 +3,7 @@ import { useStore } from '../../store';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
-import { CheckCircle, AlertTriangle, ChevronLeft, ChevronRight, Send, Plus, Trash2, CheckCircle2, ShieldCheck, Building, CreditCard, Bitcoin, Copy, FileText } from 'lucide-react';
+import { CheckCircle, AlertTriangle, ChevronLeft, ChevronRight, Send, Plus, Trash2, CheckCircle2, ShieldCheck, Building, CreditCard, Bitcoin, FileText } from 'lucide-react';
 import { TAX_ID_TYPES, Reference } from '../../types';
 import { cn } from '../../utils/cn';
 import { v4 as uuidv4 } from 'uuid';
@@ -150,6 +150,7 @@ function PaymentMethodCard({ selected, onSelect, icon: Icon, title, description 
     <button
       type="button"
       onClick={onSelect}
+      aria-pressed={selected}
       className={cn(
         'w-full flex items-center justify-between p-4 rounded-xl border-2 text-left transition-[border-color,background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary-glow)]',
         selected
@@ -326,6 +327,7 @@ function ReferencesStep({ data, updateData, showErrors }: any) {
 
   useEffect(() => {
     if (references.length === 0) addReference();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const updateReference = (id: string, updates: Partial<Reference>) => {
@@ -345,9 +347,20 @@ function ReferencesStep({ data, updateData, showErrors }: any) {
   return (
     <StepShell
       title="Referencias"
-      helper="Agregá contactos de referencia si fueron solicitados para tu proceso."
+      helper="Agregá al menos una referencia para continuar con el alta."
     >
       <div className="space-y-5">
+        {references.length === 0 && (
+          <div className="bg-[var(--bg-base)] rounded-xl p-6 border border-dashed border-[var(--border-default)] text-center">
+            <p className="text-sm font-bold text-[var(--text-primary)] mb-1">
+              Todavía no agregaste referencias.
+            </p>
+            <p className="text-xs text-[var(--text-secondary)]">
+              Agregá una referencia para continuar.
+            </p>
+          </div>
+        )}
+
         {references.map((ref, index) => (
           <div key={ref.id} className="bg-[var(--bg-base)] rounded-xl p-5 border border-[var(--border-subtle)] relative">
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-[var(--border-subtle)]">
@@ -358,7 +371,8 @@ function ReferencesStep({ data, updateData, showErrors }: any) {
                 <button
                   type="button"
                   onClick={() => removeReference(ref.id)}
-                  className="text-[11px] font-bold text-[var(--status-error)] hover:bg-[var(--status-error-subtle)] px-2 py-1 rounded uppercase tracking-wider transition-colors flex items-center gap-1"
+                  aria-label={`Eliminar referencia ${index + 1}`}
+                  className="text-[11px] font-bold text-[var(--status-error)] hover:bg-[var(--status-error-subtle)] px-2 py-1 rounded uppercase tracking-wider transition-colors flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary-glow)]"
                 >
                   <Trash2 className="w-3 h-3" /> Eliminar referencia
                 </button>
@@ -501,7 +515,13 @@ function FilesStep({ data, updateData }: any) {
                   <span className="text-sm font-medium text-[var(--text-primary)] truncate">{file.name}</span>
                   <span className="text-xs text-[var(--text-secondary)] font-mono mt-0.5">{file.fileType.toUpperCase()} • {Math.round(file.sizeBytes / 1024)} KB</span>
                 </div>
-                <button type="button" onClick={() => removeFile(file.id)} className="p-2 text-[var(--text-tertiary)] hover:text-[var(--status-error)] hover:bg-[var(--status-error-subtle)] rounded-md transition-colors flex-shrink-0" title="Eliminar archivo">
+                <button
+                  type="button"
+                  onClick={() => removeFile(file.id)}
+                  aria-label={`Eliminar archivo ${file.name}`}
+                  className="p-2 text-[var(--text-tertiary)] hover:text-[var(--status-error)] hover:bg-[var(--status-error-subtle)] rounded-md transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary-glow)]"
+                  title="Eliminar archivo"
+                >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -518,7 +538,22 @@ function ReviewStep({ data }: any) {
                        (data.hasQrBinance && !data.files?.some((f: any) => f.fileType === 'qr_binance'));
 
   const missingRef = data.references?.length === 0 || data.references.some((r: Reference) => !r.fullName || !r.email);
-  const isReady = !missingFiles && !missingRef && data.taxIdType && data.taxIdValue && data.paymentMethod;
+
+  // Method-specific payment completeness — paymentMethod alone is not enough.
+  const isPaymentComplete = (() => {
+    if (data.paymentMethod === 'CBU') {
+      return !!data.cbu;
+    }
+    if (data.paymentMethod === 'WIRE') {
+      return !!data.bankName && !!data.accountNumber && !!data.swift;
+    }
+    if (data.paymentMethod === 'CRYPTO') {
+      return !!data.walletType && !!data.walletAddress;
+    }
+    return false;
+  })();
+
+  const isReady = !missingFiles && !missingRef && data.taxIdType && data.taxIdValue && isPaymentComplete;
 
   return (
     <StepShell
@@ -532,7 +567,7 @@ function ReviewStep({ data }: any) {
         </div>
         <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--bg-base)] border border-[var(--border-subtle)]">
           <span className="text-sm font-bold text-[var(--text-primary)]">Datos de cobro</span>
-          {data.paymentMethod ? <CheckCircle2 className="w-5 h-5 text-[var(--status-success)]" /> : <AlertTriangle className="w-5 h-5 text-[var(--status-error)]" />}
+          {isPaymentComplete ? <CheckCircle2 className="w-5 h-5 text-[var(--status-success)]" /> : <AlertTriangle className="w-5 h-5 text-[var(--status-error)]" />}
         </div>
         <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--bg-base)] border border-[var(--border-subtle)]">
           <span className="text-sm font-bold text-[var(--text-primary)]">Referencias</span>
@@ -674,7 +709,7 @@ export function CandidateWizard({ token }: { token: string }) {
   };
 
   return (
-    <div className="flex flex-col min-h-full bg-[var(--bg-subtle)] pb-28">
+    <div className="flex flex-col min-h-full bg-[var(--bg-subtle)] pb-32 sm:pb-28">
       <div className="flex-1 w-full max-w-2xl mx-auto flex flex-col pt-2 sm:pt-6">
 
         <CandidateWelcomeHeader employeeName={employee.name} />
@@ -698,17 +733,29 @@ export function CandidateWizard({ token }: { token: string }) {
 
       {/* Footer sticky bottom */}
       <div className="fixed bottom-0 left-0 right-0 bg-[var(--bg-surface)] border-t border-[var(--border-subtle)] p-4 sm:p-5 z-20">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <Button variant="secondary" onClick={goBack} disabled={currentIndex === 0} className="min-h-[48px] px-4 sm:px-6">
+        <div className="max-w-2xl mx-auto flex flex-col-reverse gap-3 sm:flex-row sm:gap-0 sm:items-center sm:justify-between">
+          <Button
+            variant="secondary"
+            onClick={goBack}
+            disabled={currentIndex === 0}
+            aria-label="Volver al paso anterior"
+            className="min-h-[48px] px-4 sm:px-6 w-full sm:w-auto justify-center"
+          >
             <ChevronLeft className="w-5 h-5 mr-1" /> <span className="hidden sm:inline">Atrás</span>
           </Button>
 
           {isLastStep ? (
-            <Button onClick={handleSubmit} className="min-h-[48px] px-6 sm:px-8 shadow-sm text-sm sm:text-base">
+            <Button
+              onClick={handleSubmit}
+              className="min-h-[48px] px-6 sm:px-8 shadow-sm text-sm sm:text-base w-full sm:w-auto justify-center"
+            >
               Enviar formulario <Send className="w-5 h-5 ml-2" />
             </Button>
           ) : (
-            <Button onClick={goNext} className="min-h-[48px] px-6 sm:px-8 shadow-sm text-sm sm:text-base">
+            <Button
+              onClick={goNext}
+              className="min-h-[48px] px-6 sm:px-8 shadow-sm text-sm sm:text-base w-full sm:w-auto justify-center"
+            >
               Siguiente <ChevronRight className="w-5 h-5 ml-1.5" />
             </Button>
           )}

@@ -187,7 +187,7 @@ export function CaseDetail() {
         aria-labelledby={activeTab}
         className="flex-1 overflow-y-auto px-4 lg:px-6 py-4"
       >
-        {activeTab === 'overview' && <OverviewTab />}
+        {activeTab === 'overview' && <OverviewTab onOpenAudit={() => setActiveTab('audit')} />}
         {activeTab === 'data' && <DataTab />}
         {activeTab === 'email' && <EmailTab />}
         {activeTab === 'tasks' && <TasksTab />}

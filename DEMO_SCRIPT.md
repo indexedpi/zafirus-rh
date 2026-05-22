@@ -1,39 +1,50 @@
 # Guía de Presentación: Zafirus RH Onboarding
 
-## 1. Propósito de la Demo
-Demostrar el flujo end-to-end del sistema de onboarding de Zafirus, validando la experiencia del usuario (RRHH y candidato) antes de invertir en la integración de APIs y el desarrollo del backend.
+## 1. Pitch de apertura
+> **Zafirus RH centraliza el alta operativa para reducir pasos omitidos, ordenar datos y automatizar tareas de activación.**
 
-## 2. Promesa del Producto
-> **Reducir pasos omitidos, centralizar datos de alta y automatizar activación operativa.**
+Una sola superficie reemplaza tickets dispersos, planillas y mensajes sueltos durante el alta de un colaborador.
 
-## 3. Rutas de Demostración
-- **Modo Producto Normal**: `/` (Experiencia real de la aplicación, sin herramientas de prueba visibles).
-- **Modo Presentación**: `/#demo` (Habilita el panel partido de RRHH/Candidato, el botón "Auto Demo" y las funciones de reseteo rápido de estado).
+## 2. Rutas de demostración
+- **Modo producto normal**: `/` — experiencia real, sin herramientas de presentación visibles.
+- **Modo presentación**: `/#demo` — habilita el panel partido RRHH / Candidato, el botón **Auto Demo** y **Reiniciar**.
 
-## 4. Script de Presentación (Paso a Paso)
-1. **Listado de Casos**: Mostrar el panel principal con los casos existentes y sus estados operativos.
-2. **Crear Caso**: Usar el modal para iniciar un nuevo caso cargando datos básicos y agenda inicial.
-3. **Enviar Formulario**: Desde el panel de acciones, despachar el formulario al candidato.
-4. **Portal del Candidato**: (Vía vista dividida en `#demo` o abriendo el enlace) Mostrar cómo el candidato completa DNI, referencias, métodos de cobro y carga archivos condicionales.
-5. **Revisión de RRHH**: Volver al panel de RRHH y revisar los datos declarados en la pestaña "Datos".
-6. **Consolidar**: Confirmar y consolidar la información fiscal y bancaria.
-7. **Aprobar Email**: Revisar la pestaña "Email", verificar las variables dinámicas y aprobar la plantilla.
-8. **Activar**: Confirmar el inicio de la activación operativa.
-9. **Tareas**: Mostrar la pestaña "Tareas" ejecutando el flujo automatizado secuencial y condicional.
-10. **Operativo**: Ver el caso finalizado y consultar el registro de la pestaña "Auditoría".
+## 3. Camino de demostración (paso a paso)
+1. **Crear caso** — desde la lista, abrir el modal y cargar los datos básicos del nuevo colaborador.
+2. **Enviar formulario** — desde la barra inferior de acciones, despachar el formulario al candidato.
+3. **Intake del candidato** — abrir el formulario del candidato (panel derecho en modo `#demo`) y completar identificación fiscal, datos de cobro, referencias y archivos condicionales.
+4. **Enviar formulario** — el candidato confirma y vuelve el caso al panel de RRHH.
+5. **Revisar datos** — pestaña **Datos**, validar todo lo declarado por el candidato.
+6. **Consolidar datos** — confirmar CBU/CUIT y marcar los datos como consolidados.
+7. **Aprobar caso** — en la barra de acciones, aprobar para liberar la activación.
+8. **Activar onboarding** — disparar la activación; las tareas operativas comienzan a ejecutarse.
+9. **Inspeccionar tareas** — pestaña **Tareas**, observar el avance, los reintentos y la evidencia simulada.
+10. **Llegar a operativo** — el caso queda **Operativo** y aparece el overlay de confirmación.
+11. **Inspeccionar auditoría** — pestaña **Auditoría** (o el atajo "Ver auditoría completa" en Resumen) para revisar la traza cronológica.
 
-## 5. Qué es exclusivo de la Demo (Mock)
-- Almacenamiento en memoria (Zustand), no hay persistencia.
-- Automatizaciones de tareas simuladas con `setTimeout`.
-- Carga de archivos falsa (solo registra metadatos locales).
-- Tokens de candidato simulados y ruteo basado en hash.
+## 4. Qué es real en este demo
+- Flujo end-to-end del frontend.
+- Validaciones en cada paso (intake, revisión, activación).
+- Simulación realista de tareas de activación con estados pending/running/success/failed/skipped.
+- Registro de auditoría cronológico con filtros y redacción de datos sensibles.
+- Vista previa del email de bienvenida con la identidad visual de Zafirus.
 
-## 6. Qué cambiará en Producción
-- **Frontend**: Migración a Angular 17+ y nuestro sistema de diseño Sora.
-- **Backend**: NestJS, TypeORM y base de datos PostgreSQL.
-- **Infraestructura**: Despliegue en AWS (ECS Fargate, RDS, S3).
-- **Integraciones**: Conexión real con Google Workspace Admin SDK (creación de usuarios/grupos) y APIs bancarias.
+## 5. Qué está mockeado
+- Persistencia en memoria (Zustand) — al recargar se pierden los datos a menos que se haya hecho seed.
+- Carga de archivos (solo metadatos locales, no hay upload real).
+- Automatizaciones (`setTimeout` simulado, sin Google Workspace ni Admin SDK reales).
+- Envío de emails (solo preview, no se envía nada).
+- Tokens del candidato y ruteo por hash.
 
-## 7. Limitaciones Conocidas
-- Al recargar la página se reinician los datos si no hay un gestor de caché configurado en el navegador.
-- El panel partido en móviles (375px) superpone la vista de RRHH y la del candidato en modo presentación.
+## 6. Próximos pasos hacia producción
+- Migración del frontend a Angular 17+ y al design system Sora.
+- Backend en NestJS con TypeORM y PostgreSQL.
+- Infraestructura sobre AWS (ECS Fargate, RDS, S3).
+- Integración real con Google Workspace Admin SDK (creación de usuarios, grupos, firma).
+- Carga real de archivos con storage y validaciones de seguridad.
+- Notificaciones reales por email y enlaces de candidato con expiración firmada.
+
+## 7. Limitaciones conocidas para el demo
+- Al recargar la página se reinicia el estado salvo que se vuelva a sembrar el demo (`Reiniciar` en modo `#demo`).
+- A 375 px el panel partido en modo `#demo` se vuelve un solo panel con interruptor RRHH / Candidato.
+- Algunos detalles de auditoría se muestran como **"Dato sensible oculto"**: es intencional; en producción se exponen vía permisos.

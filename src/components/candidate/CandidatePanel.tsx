@@ -80,7 +80,7 @@ export function CandidatePanel({ token }: CandidatePanelProps) {
             Formulario no disponible
           </h2>
           <p className="text-sm text-[var(--text-secondary)] max-w-sm">
-            Seleccioná un caso en estado "Invitado" en Zafirus para visualizar el portal autodeclarativo.
+            Seleccioná un caso en estado "Invitado" en Zafirus para visualizar el formulario del candidato.
           </p>
         </div>
       );

@@ -279,7 +279,7 @@ export function EmailTab() {
           </p>
         </div>
 
-        {/* Readiness */}
+        {/* Template status panel */}
         <div className="px-4 py-4 border-b border-[var(--border-subtle)]">
           <p className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-3">Estado de la plantilla</p>
           <div className="space-y-2">
