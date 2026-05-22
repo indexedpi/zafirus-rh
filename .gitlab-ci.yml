@@ -23,8 +23,7 @@ review:
       echo "Building MR diff"
       git diff "origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME...$CI_COMMIT_SHA" -- . > mr-diff.patch
 
-      echo "=== Diff being reviewed ==="
-      head -200 mr-diff.patch || true
+      echo "MR diff captured for review"
 
       echo "Building OpenCode Zen payload"
       jq -n --rawfile diff mr-diff.patch '{
@@ -48,7 +47,13 @@ review:
         -H "Authorization: Bearer $OPENCODE_API_KEY" \
         -d @payload.json > review-response.json
 
-      jq -r '.choices[0].message.content // "ERROR: No se pudo generar review"' review-response.json > review.txt
+      if jq -e '.choices[0].message.content' review-response.json >/dev/null 2>&1; then
+        jq -r '.choices[0].message.content' review-response.json > review.txt
+      else
+        echo "ERROR: OpenCode Zen did not return an OpenAI-compatible chat/completions response." > review.txt
+        echo "Response shape:" >> review.txt
+        jq 'type' review-response.json >> review.txt 2>/dev/null || echo "non-json-response" >> review.txt
+      fi
 
       echo ""
       echo "============================================"
@@ -68,9 +73,6 @@ review:
   artifacts:
     when: always
     paths:
-      - mr-diff.patch
-      - payload.json
-      - review-response.json
       - review.txt
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
