@@ -46,18 +46,26 @@ review:
         ]
       }' > payload.json
 
-      echo "Calling OpenCode Zen API"
-      curl -s "${OPENCODE_BASE_URL%/}/chat/completions" \
+      echo "Calling OpenCode API"
+      HTTP_STATUS="$(curl -s -w '%{http_code}' -o review-response.json "${OPENCODE_BASE_URL%/}/chat/completions" \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $OPENCODE_API_KEY" \
-        -d @payload.json > review-response.json
+        -d @payload.json)"
+
+      if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
+        echo "ERROR: OpenCode API returned HTTP $HTTP_STATUS" > review.txt
+        cat review.txt
+        exit 1
+      fi
 
       if jq -e '.choices[0].message.content' review-response.json >/dev/null 2>&1; then
         jq -r '.choices[0].message.content' review-response.json > review.txt
       else
-        echo "ERROR: OpenCode Zen did not return an OpenAI-compatible chat/completions response." > review.txt
+        echo "ERROR: OpenCode API did not return an OpenAI-compatible chat/completions response." > review.txt
         echo "Response shape:" >> review.txt
         jq 'type' review-response.json >> review.txt 2>/dev/null || echo "non-json-response" >> review.txt
+        cat review.txt
+        exit 1
       fi
 
       echo ""
