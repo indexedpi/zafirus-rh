@@ -11,7 +11,11 @@ review:
       set -eu
 
       echo "Extracting OpenCode API key"
-      OPENCODE_API_KEY="$(jq -r '.["opencode"].apiKey' "$OPENCODE_AUTH_JSON")"
+      if [ -f "$OPENCODE_AUTH_JSON" ]; then
+        OPENCODE_API_KEY="$(jq -r '.opencode.providers.opencode.apiKey // .opencode.apiKey' "$OPENCODE_AUTH_JSON")"
+      else
+        OPENCODE_API_KEY="$(printf '%s' "$OPENCODE_AUTH_JSON" | jq -r '.opencode.providers.opencode.apiKey // .opencode.apiKey')"
+      fi
 
       echo "Fetching target branch"
       git fetch origin "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
