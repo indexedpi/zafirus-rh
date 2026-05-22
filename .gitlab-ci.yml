@@ -34,7 +34,8 @@ review:
       }' > payload.json
 
     # Call OpenCode Zen API
-    - curl -s https://zen.opencode.ai/v1/chat/completions \
+    - |
+      curl -s https://zen.opencode.ai/v1/chat/completions \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $OPENCODE_API_KEY" \
         -d @payload.json > review-response.json
