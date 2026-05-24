@@ -22,7 +22,7 @@ Thumbs.db
 .env.*.local
 
 # Angular cache
-.angular/cache/
+.angular/
 
 # Logs
 *.log
@@ -35,10 +35,7 @@ pnpm-debug.log*
 coverage/
 .nyc_output/
 
-# SDD artifacts (keep openspec/ but ignore temp files)
-openspec/.tmp/
-
-# OpenCode auth (NEVER commit secrets)
-opencode-config/auth.json
+# Keys and secrets — NEVER commit
 *.key
 *.pem
+*.p12

@@ -1,48 +1,56 @@
 # Zafirus Onboarding System
 
-Plataforma interna de Zafirus Technologies para automatizar el proceso de onboarding de colaboradores.
+Internal onboarding platform for Zafirus Technologies.
 
 ## Stack
 
-- React 19 + TypeScript
-- Vite 7 + vite-plugin-singlefile
-- Tailwind CSS v4
-- Zustand
-- Lucide React
-- Supabase (optional — realtime persistence)
+| Layer | Technology |
+|---|---|
+| Frontend | Angular + Tailwind CSS |
+| Backend | NestJS |
+| ORM | TypeORM |
+| Database | PostgreSQL |
+
+## Monorepo structure
+
+```
+apps/
+├── web-angular/     # Angular frontend
+└── api-nest/        # NestJS backend API
+docs/
+├── migration/       # React → Angular migration reference
+├── PRODUCT.md       # Product purpose, users, design principles
+└── GOOGLE_WORKSPACE_INTEGRATION_PLAN.md  # Phase 8 integration spec
+```
 
 ## Setup
 
+### Frontend
+
 ```bash
+cd apps/web-angular
 npm install
-npm run dev       # development server
-npm run build     # production build (single-file HTML)
+npm run start       # development server
+npm run build       # production build
 ```
 
-## Demo mode
+### Backend
 
-Append `#demo` to the URL to unlock the split-screen, Auto Demo runner, and Reset controls.
-See [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) for the full walkthrough including Supabase local setup and candidate token routing.
+```bash
+cd apps/api-nest
+npm install
+npm run start:dev   # development with watch
+npm run build       # production build
+```
 
-## Protected files
+## Environment
 
-`src/store.ts` and `src/types.ts` are immutable state and product contracts — do not modify.
-
-## Documentation
-
-| File | Contents |
-|---|---|
-| [DESIGN.md](DESIGN.md) | Visual constitution — color tokens, typography, motion, accessibility rules |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Workflow, conventions, merge request process |
-| [docs/PHASE_PLAN.md](docs/PHASE_PLAN.md) | Phase history (7A–7H complete) and Phase 8 scope |
-| [docs/PRODUCT.md](docs/PRODUCT.md) | Product purpose, users, design principles |
-| [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) | End-to-end demo walkthrough |
-| [docs/QA_CHECKLIST.md](docs/QA_CHECKLIST.md) | QA checklist per phase |
-| [docs/UI_AUDIT.md](docs/UI_AUDIT.md) | Known issues and audit findings per phase |
-| [docs/GOOGLE_WORKSPACE_INTEGRATION_PLAN.md](docs/GOOGLE_WORKSPACE_INTEGRATION_PLAN.md) | Phase 8 backend integration plan |
-| [docs/specs/](docs/specs/) | Phase 2 architecture specs (NestJS backend, future) |
-| [docs/guides/](docs/guides/) | Development setup and GitLab workflow guides |
+Copy `.env.example` to `.env` in each app and fill in the required values. Never commit `.env` files with real credentials.
 
 ## Status
 
-Phase 7H complete. Phase 8 (Google Workspace Integration) is next.
+Angular and NestJS migration from React/Vite demo. Frontend works with mock state. Backend builds independently. Not yet wired end-to-end or production-deployed.
+
+## Legacy reference
+
+The React/Vite implementation is preserved on the `legacy/react-demo` branch for reference.
