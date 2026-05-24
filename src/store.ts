@@ -245,6 +245,7 @@ interface StoreState {
   seedDemo: () => void;
   startAutoRun: () => void;
   stopAutoRun: () => void;
+  hydrateCases: (cases: OnboardingCase[]) => void;
 
   // Audit
   toggleAuditDrawer: () => void;
@@ -457,6 +458,7 @@ export const useStore = create<StoreState>((set, get) => ({
           correctionNote: note,
           candidateToken: newToken,
           candidateTokenExpiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
+          candidateData: c.candidateData ? { ...c.candidateData, submittedAt: null } : null,
           auditLog: [...c.auditLog, makeAudit('correction_requested', 'onboarding_case', caseId, 'user', 'rrhh', { note })],
           updatedAt: Date.now(),
         } : c
@@ -843,6 +845,8 @@ export const useStore = create<StoreState>((set, get) => ({
   // ────────────────────────────────────────────
   // DEMO MANAGEMENT
   // ────────────────────────────────────────────
+
+  hydrateCases: (cases) => set({ cases }),
 
   resetDemo: () => {
     // Clear all auto-run timers

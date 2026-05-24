@@ -1,13 +1,13 @@
 import { useStore } from '../../store';
 import { CandidateWizard } from './CandidateWizard';
-import { Clock, FileText, CheckCircle, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Clock, FileText, CheckCircle, ShieldCheck, AlertTriangle, Link2Off } from 'lucide-react';
 
 interface CandidatePanelProps {
   token: string | null;
 }
 
 export function CandidatePanel({ token }: CandidatePanelProps) {
-  const { getSelectedCase } = useStore();
+  const { getSelectedCase, getCaseByToken } = useStore();
   const selectedCase = getSelectedCase();
 
   const isDemoMode = window.location.hash.includes('demo');
@@ -19,8 +19,8 @@ export function CandidatePanel({ token }: CandidatePanelProps) {
 
   // If selected case is in candidate_submitted or later, show what the candidate sees
   if (selectedCase && !activeToken) {
-    // Show the submitted confirmation state in Spanish
-    if (selectedCase.candidateData?.submittedAt) {
+    // Show the submitted confirmation state — but not if correction is pending
+    if (selectedCase.candidateData?.submittedAt && !selectedCase.correctionNote) {
       return (
         <div className="h-full flex flex-col items-center justify-center text-center px-6 bg-[var(--bg-subtle)]">
           <CheckCircle className="w-16 h-16 text-[var(--status-success)] mb-4 animate-fade-in" />
@@ -97,6 +97,24 @@ export function CandidatePanel({ token }: CandidatePanelProps) {
         </h2>
         <p className="text-sm text-[var(--text-secondary)] max-w-sm">
           Contactá al equipo de Personas de Zafirus.
+        </p>
+      </div>
+    );
+  }
+
+  // Guard: token is set but the case can't be found (e.g. fresh tab, state lost)
+  const resolvedCase = getCaseByToken(activeToken);
+  if (!resolvedCase) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center text-center px-6 bg-[var(--bg-subtle)]">
+        <div className="w-16 h-16 rounded-xl bg-[var(--bg-elevated)] flex items-center justify-center mb-4 border border-[var(--border-default)]">
+          <Link2Off className="w-8 h-8 text-[var(--status-warning)]" />
+        </div>
+        <h2 className="text-lg font-bold text-[var(--text-primary)] mb-2">
+          Enlace expirado o no disponible
+        </h2>
+        <p className="text-sm text-[var(--text-secondary)] max-w-sm">
+          Este enlace no es válido en esta sesión. Contactá al equipo de Personas de Zafirus para obtener un nuevo acceso.
         </p>
       </div>
     );

@@ -210,9 +210,9 @@ body {
 .var-pill {
   display: inline-flex;
   align-items: center;
-  background: var(--editor-active-bg);
+  background: rgba(69, 156, 219, 0.18);
   color: var(--editor-active-text);
-  border: 1px solid rgba(69, 156, 219, 0.30);
+  border: 1px solid rgba(69, 156, 219, 0.60);
   border-radius: 4px;
   padding: 1px 6px;
   font-size: 13px;
@@ -223,18 +223,32 @@ body {
   white-space: nowrap;
   vertical-align: baseline;
   margin: 0 1px;
+  box-shadow: 0 1px 0 rgba(69, 156, 219, 0.08);
+  transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
 }
 
 .var-pill::before {
-  content: '⌀';
-  font-size: 10px;
-  opacity: 0.5;
-  margin-right: 3px;
+  content: '{ }';
+  font-size: 9px;
+  opacity: 0.55;
+  margin-right: 4px;
+  letter-spacing: -1px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+.var-pill:hover {
+  border-color: rgba(69, 156, 219, 0.85);
+  box-shadow: 0 0 0 2px rgba(69, 156, 219, 0.15);
+}
+
+.var-pill--highlighted {
+  border-color: rgba(69, 156, 219, 1);
+  box-shadow: 0 0 0 2px rgba(69, 156, 219, 0.30);
 }
 
 .var-pill[data-empty="true"] {
   background: var(--editor-warning-bg);
-  border-color: rgba(245, 158, 11, 0.3);
+  border-color: rgba(245, 158, 11, 0.5);
   color: var(--editor-warning-text);
 }
 

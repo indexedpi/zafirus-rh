@@ -1,30 +1,28 @@
 import { useEffect, useState, useRef } from 'react';
 import { useStore } from './store';
+import { loadDemoCases, saveDemoCases, subscribeDemoCases, clearDemoCases } from './lib/demoPersistence';
 import { TopBar } from './components/layout/TopBar';
 import { AuditDrawer } from './components/layout/AuditDrawer';
 import { CaseList } from './components/rrhh/CaseList';
 import { CaseDetail } from './components/rrhh/CaseDetail';
 import { CandidatePanel } from './components/candidate/CandidatePanel';
 import { ToastContainer } from './components/ui/Toast';
-import { ChevronLeft } from 'lucide-react';
 import { cn } from './utils/cn';
 
 export default function App() {
-  const { seedDemo, isAutoRunning, getSelectedCase } = useStore();
+  const { seedDemo, isAutoRunning, getSelectedCase, hydrateCases } = useStore();
   const [candidateToken, setCandidateToken] = useState<string | null>(null);
-  const [mobilePanel, setMobilePanel] = useState<'rrhh' | 'candidato'>('rrhh');
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // Parse hash for candidate token and demo mode
+  // Parse hash for candidate token and demo mode — track both as state so
+  // navigating to /#demo without a candidate token still triggers a re-render.
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash;
       const match = hash.match(/candidate=([a-f0-9]+)/i);
-      if (match) {
-        setCandidateToken(match[1]);
-      } else {
-        setCandidateToken(null);
-      }
+      setCandidateToken(match ? match[1] : null);
+      setIsDemoMode(hash.includes('demo'));
     };
 
     handleHashChange();
@@ -32,12 +30,56 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  // Seed demo data on first load — read fresh state to avoid stale closure in StrictMode
+  // Boot: Supabase and seeding only in #demo mode.
+  // In normal mode, clear any leftover demo data so the app starts fresh.
   useEffect(() => {
-    if (useStore.getState().cases.length === 0) {
-      seedDemo();
+    const isDemo = window.location.hash.includes('demo');
+    if (!isDemo) {
+      clearDemoCases();
+      return;
     }
+    let cancelled = false;
+    loadDemoCases().then((remoteCases) => {
+      if (cancelled) return;
+      if (remoteCases && remoteCases.length > 0) {
+        hydrateCases(remoteCases);
+      } else if (useStore.getState().cases.length === 0) {
+        seedDemo();
+      }
+    });
+    return () => { cancelled = true; };
   }, []);
+
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isApplyingRemoteRef = useRef(false);
+
+  // Debounced save on store changes — only in #demo mode
+  useEffect(() => {
+    const unsub = useStore.subscribe((state) => {
+      if (!window.location.hash.includes('demo')) return;
+      if (isApplyingRemoteRef.current) return;
+      const { cases } = state;
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        saveDemoCases(cases);
+      }, 600);
+    });
+    return () => {
+      unsub();
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
+
+  // Supabase Realtime subscription — only in #demo mode
+  useEffect(() => {
+    if (!isDemoMode) return;
+    const unsub = subscribeDemoCases((remoteCases) => {
+      isApplyingRemoteRef.current = true;
+      hydrateCases(remoteCases);
+      setTimeout(() => { isApplyingRemoteRef.current = false; }, 100);
+    });
+    return unsub;
+  }, [hydrateCases, isDemoMode]);
 
   const selectedCase = getSelectedCase();
 
@@ -55,7 +97,8 @@ export default function App() {
   }, [selectedCase?.status]);
 
   // Show split-screen ONLY if candidate token is active, or auto-running, or if hash contains "demo"
-  const showSplitScreen = isAutoRunning || !!candidateToken || window.location.hash.includes('demo');
+  const showSplitScreen = isAutoRunning || !!candidateToken || isDemoMode;
+  const isCandidateOnlyRoute = !!candidateToken && !isDemoMode;
 
   return (
     <div className="h-screen flex flex-col bg-[var(--bg-base)] overflow-hidden">
@@ -69,14 +112,18 @@ export default function App() {
         </div>
       )}
 
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden relative">
-        {/* Panel RRHH — Left Column */}
+      <div className={cn(
+        'relative flex min-h-0 w-full flex-1 flex-col overflow-hidden',
+        showSplitScreen && 'min-[1180px]:grid min-[1180px]:grid-cols-[minmax(0,1fr)_clamp(360px,30vw,460px)] min-[1180px]:grid-rows-[minmax(0,1fr)]'
+      )}>
+        {/* Panel RRHH */}
         <div className={cn(
-          'flex-col border-r border-[var(--border-default)] flex-shrink-0 h-full overflow-hidden',
-          // On mobile: flex if mobilePanel === 'rrhh', otherwise hidden
-          mobilePanel === 'rrhh' ? 'flex w-full' : 'hidden',
-          // On desktop: if split screen is enabled, it takes 1/2 width. Otherwise, it takes full width (w-full).
-          showSplitScreen ? 'lg:flex lg:w-1/2' : 'lg:flex lg:w-full'
+          'flex flex-col border-b border-[var(--border-default)] min-h-0 overflow-y-auto overflow-x-hidden min-w-0',
+          isCandidateOnlyRoute
+            ? 'hidden min-[1180px]:flex min-[1180px]:border-b-0 min-[1180px]:border-r'
+            : showSplitScreen
+              ? 'w-full min-[1180px]:h-full min-[1180px]:border-b-0 min-[1180px]:border-r'
+              : 'w-full flex-1 border-b-0'
         )}>
           {/* Inner layout: sidebar cases + detail */}
           <div className="flex-1 flex min-h-0 overflow-hidden">
@@ -88,12 +135,11 @@ export default function App() {
               <CaseList onCollapse={() => setSidebarOpen(false)} />
             </div>
             <div className={cn(
-              "flex-1 flex flex-col min-w-0 bg-[var(--bg-base)]",
+              "flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden bg-[var(--bg-base)]",
               selectedCase ? "flex" : "hidden md:flex"
             )}>
               <CaseDetail
-                showCandidatePanel={showSplitScreen}
-                onShowCandidatePanel={() => setMobilePanel('candidato')}
+                showCandidatePanel={false}
                 sidebarOpen={sidebarOpen}
                 onToggleSidebar={() => setSidebarOpen(o => !o)}
               />
@@ -101,29 +147,18 @@ export default function App() {
           </div>
         </div>
 
-        {/* Panel Candidato — Right Column (only if split-screen is active, or if mobilePanel === 'candidato') */}
+        {/* Panel Candidato */}
         <div className={cn(
-          'flex-col bg-[var(--bg-subtle)] flex-shrink-0 h-full overflow-hidden',
-          // Mobile: show if mobilePanel === 'candidato'
-          (mobilePanel === 'candidato' && showSplitScreen) ? 'flex w-full' : 'hidden',
-          // Desktop: only show if showSplitScreen is true
-          showSplitScreen ? 'lg:flex lg:w-1/2' : 'lg:hidden'
+          'flex flex-col bg-[var(--bg-subtle)] min-h-0 overflow-y-auto overflow-x-hidden min-w-0',
+          showSplitScreen ? 'w-full min-[1180px]:h-full min-[1180px]:w-auto' : 'hidden'
         )}>
           {/* Sub-header of the panel */}
-          <div className="px-4 py-2 bg-[var(--bg-surface)] border-b border-[var(--border-subtle)] flex items-center justify-between flex-shrink-0 h-11">
+          <div className="flex h-[57px] flex-shrink-0 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-2">
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[var(--brand-primary-subtle)] text-[11px] font-semibold text-[var(--brand-primary)] tracking-[0.06em] uppercase">
               Formulario del Candidato
             </span>
-            <button
-              onClick={() => setMobilePanel('rrhh')}
-              className="lg:hidden inline-flex items-center gap-1 text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-elevated)] px-3 py-1.5 rounded-full hover:opacity-90 transition-opacity min-h-[36px]"
-              aria-label="Ver panel de RRHH"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-              <span>RRHH</span>
-            </button>
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
             <CandidatePanel token={candidateToken} />
           </div>
         </div>

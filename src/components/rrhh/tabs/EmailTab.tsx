@@ -1,9 +1,10 @@
 import { useStore } from '../../../store';
 import { Button } from '../../ui/Button';
-import { Mail, Check, AlertCircle, Copy, FileText, Calendar, Link, Maximize2, Minimize2 } from 'lucide-react';
+import { Check, FileText, Calendar, Link, Maximize2, Minimize2, Pencil } from 'lucide-react';
 import { cn } from '../../../utils/cn';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useContext } from 'react';
 import { ZafirusLogo } from '../../ui/ZafirusLogo';
+import { CaseNavigationContext } from '../CaseDetail';
 
 // ─── UTILS & CONSTANTS ──────────────────────────────────────────────
 const AGENDA_FIELDS: { key: string; label: string; placeholder: string }[] = [
@@ -34,6 +35,43 @@ const VARIABLE_GROUPS = [
   }
 ];
 
+// Maps VARIABLE_GROUPS display keys → AGENDA_FIELDS storage keys
+const DISPLAY_TO_AGENDA_KEY: Record<string, string> = {
+  hrMeetingDate: 'welcomeMeetingTime',
+  hrMeetingUrl: 'welcomeMeetingLink',
+  managerMeetingDate: 'managerMeetingTime',
+  managerMeetingUrl: 'managerMeetingLink',
+  onboardingFolderUrl: 'onboardingFolderUrl',
+  kitRedesUrl: 'kitRedesUrl',
+  startDate: 'startDateIso',
+  startDateFormatted: 'startDateIso',
+};
+
+const EMPLOYEE_FIELD_IDS: Record<string, string> = {
+  firstName: 'dtab-field-name',
+  fullName:  'dtab-field-name',
+  corporateEmail: 'dtab-field-corporateEmail',
+  managerName: 'dtab-field-managerName',
+};
+
+type VariableCategory = 'agenda' | 'employee' | 'inline' | 'computed';
+
+function classifyKey(key: string): VariableCategory {
+  if (key in DISPLAY_TO_AGENDA_KEY) return 'agenda';
+  if (key === 'fullName') return 'computed';
+  if (key === 'temporaryPassword') return 'inline';
+  return 'employee';
+}
+
+function scrollToAgendaField(displayKey: string) {
+  const storageKey = DISPLAY_TO_AGENDA_KEY[displayKey];
+  if (!storageKey) return;
+  const el = document.getElementById(`agenda-field-${storageKey}`);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  (el as HTMLInputElement).focus({ preventScroll: true });
+}
+
 // ─── LOCAL COMPONENTS ────────────────────────────────────────────────
 
 function EmailSignatureBanner() {
@@ -55,21 +93,47 @@ function EmailSignatureBanner() {
   );
 }
 
-function VariableToken({ label, token, isMissing, isDemo }: { label: string, token: string, isMissing: boolean, isDemo?: boolean }) {
+interface VariableTokenProps {
+  label: string;
+  token: string;
+  isMissing: boolean;
+  isDemo?: boolean;
+  isHighlighted?: boolean;
+  onEditClick?: () => void;
+}
+
+function VariableToken({ label, token, isMissing, isDemo, isHighlighted, onEditClick }: VariableTokenProps) {
   return (
-    <div className="flex items-center justify-between bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded px-2.5 py-1.5 mb-1.5">
-      <div className="flex flex-col">
+    <div className={cn(
+      "flex items-center justify-between bg-[var(--bg-elevated)] border rounded px-2.5 py-1.5 mb-1.5 transition-all",
+      isHighlighted
+        ? "border-[var(--brand-primary)] ring-2 ring-[var(--brand-primary)] ring-offset-1 ring-offset-[var(--bg-subtle)]"
+        : "border-[var(--border-subtle)]"
+    )}>
+      <div className="flex flex-col min-w-0 flex-1">
         <span className="text-xs font-medium text-[var(--text-primary)]">{label}</span>
         <span className="text-[10px] font-mono text-[var(--text-secondary)]">{token}</span>
       </div>
-      <span className={cn(
-        "text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded",
-        isMissing ? "bg-[var(--status-error-subtle)] text-[var(--status-error)]" :
-        isDemo ? "bg-[var(--status-warning-subtle)] text-[var(--status-warning)]" :
-        "bg-[var(--status-success-subtle)] text-[var(--status-success)]"
-      )}>
-        {isMissing ? 'Falta dato' : isDemo ? 'Demo' : 'Disponible'}
-      </span>
+      <div className="flex items-center gap-1.5 flex-shrink-0 ml-1.5">
+        <span className={cn(
+          "text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded",
+          isMissing ? "bg-[var(--status-error-subtle)] text-[var(--status-error)]" :
+          isDemo ? "bg-[var(--status-warning-subtle)] text-[var(--status-warning)]" :
+          "bg-[var(--status-success-subtle)] text-[var(--status-success)]"
+        )}>
+          {isMissing ? 'Falta dato' : isDemo ? 'Demo' : 'Disponible'}
+        </span>
+        {onEditClick && (
+          <button
+            aria-label="Ir a editar variable"
+            title="Ir a editar"
+            onClick={(e) => { e.stopPropagation(); onEditClick(); }}
+            className="p-0.5 rounded text-[var(--text-tertiary)] hover:text-[var(--brand-primary)] hover:bg-[var(--brand-primary-subtle)] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--brand-primary)]"
+          >
+            <Pencil size={12} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -196,14 +260,12 @@ function WelcomeEmailPreview({ variables, subject }: { variables: Record<string,
 // ─── MAIN TAB COMPONENT ─────────────────────────────────────────────
 
 export function EmailTab() {
-  const { getSelectedCase, updateEmailTemplate, approveEmail, addToast } = useStore();
+  const { getSelectedCase, updateEmailTemplate, approveEmail } = useStore();
   const selectedCase = getSelectedCase();
   const [activeView, setActiveView] = useState<'editor' | 'preview'>('preview');
-  const [showHint, setShowHint] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const editorRef = useRef<HTMLDivElement>(null);
-  const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   if (!selectedCase) return null;
 
@@ -215,7 +277,8 @@ export function EmailTab() {
     fullName: `${employee.name} ${employee.lastName}`,
     corporateEmail: employee.corporateEmail || suggestedEmail || '',
     temporaryPassword: emailTemplate?.temporaryPassword || 'Cambiar2026-DEMO',
-    startDate: new Date(employee.startDate).toLocaleDateString('es-AR'),
+    startDate: new Date((emailTemplate as any)?.startDateIso || employee.startDate).toLocaleDateString('es-AR'),
+    startDateFormatted: new Date((emailTemplate as any)?.startDateIso || employee.startDate).toLocaleDateString('es-AR'),
     managerName: employee.managerName || '',
     onboardingFolderUrl: emailTemplate?.onboardingFolderUrl || 'https://drive.google.com/drive/folders/demo',
     kitRedesUrl: (emailTemplate as any)?.kitRedesUrl || 'https://drive.google.com/kit-redes-demo',
@@ -227,13 +290,39 @@ export function EmailTab() {
 
   const isApproved = emailTemplate?.approvedAt != null;
 
-  const handleApprove = () => {
-    approveEmail(selectedCase.id);
+  const [hoveredVar, setHoveredVar] = useState<string | null>(null);
+  const nav = useContext(CaseNavigationContext);
+
+  // Clear hover highlight when switching away from editor view
+  useEffect(() => {
+    if (activeView !== 'editor') setHoveredVar(null);
+  }, [activeView]);
+
+  const handleEditorMouseOver = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    const v = target.dataset?.variable;
+    if (v && v !== hoveredVar) setHoveredVar(v);
   };
 
-  const handleCopyEmail = () => {
-    navigator.clipboard.writeText(variables.corporateEmail);
-    addToast({ type: 'success', title: 'Email copiado' });
+  const handleEditorMouseLeave = () => setHoveredVar(null);
+
+  const handleEditClick = (key: string) => {
+    const category = classifyKey(key);
+    if (category === 'agenda') {
+      scrollToAgendaField(key);
+    } else if (category === 'employee') {
+      nav?.navigateTo('data');
+      const fieldId = EMPLOYEE_FIELD_IDS[key];
+      if (fieldId) {
+        setTimeout(() => {
+          document.getElementById(fieldId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 120);
+      }
+    }
+  };
+
+  const handleApprove = () => {
+    approveEmail(selectedCase.id);
   };
 
   const insertVariable = (varName: string) => {
@@ -269,14 +358,6 @@ export function EmailTab() {
   };
 
   useEffect(() => {
-    if (activeView === 'editor') {
-      setShowHint(true);
-      hintTimerRef.current = setTimeout(() => setShowHint(false), 3500);
-    }
-    return () => { if (hintTimerRef.current) clearTimeout(hintTimerRef.current); };
-  }, [activeView]);
-
-  useEffect(() => {
     if (!isFullscreen) return;
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsFullscreen(false); };
     window.addEventListener('keydown', handler);
@@ -301,7 +382,7 @@ export function EmailTab() {
       "flex flex-col lg:flex-row overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-base)]",
       isFullscreen
         ? "fixed inset-0 z-50 rounded-none border-0"
-        : "h-full -mx-4 lg:-mx-6 -my-4 rounded-lg"
+        : "absolute inset-0 rounded-none"
     )}>
 
       {/* ══════════════ LEFT SIDEBAR ══════════════ */}
@@ -342,7 +423,8 @@ export function EmailTab() {
 
         {/* Variables */}
         <div className="px-4 py-4 flex-1">
-          <p className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-3">Variables del caso</p>
+          <p className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-0.5">Insertá variables en el editor</p>
+          <p className="text-[10px] text-[var(--text-tertiary)] mb-3">Hacé clic en una variable para insertarla donde está el cursor.</p>
 
           <div className="space-y-4">
             {VARIABLE_GROUPS.map(group => (
@@ -364,6 +446,9 @@ export function EmailTab() {
                                 key === 'managerMeetingDate' ? 'Fecha manager' :
                                 key === 'managerMeetingUrl' ? 'Link manager' : key;
 
+                  const category = classifyKey(key);
+                  const showEditButton = category !== 'inline' && category !== 'computed';
+
                   return (
                     <button
                       key={key}
@@ -375,7 +460,14 @@ export function EmailTab() {
                       )}
                       title={activeView === 'preview' ? "Cambiá a vista editable para insertar variables" : "Insertar en el editor"}
                     >
-                      <VariableToken label={label} token={`{{${key}}}`} isMissing={!val} isDemo={isDemo} />
+                      <VariableToken
+                        label={label}
+                        token={`{{${key}}}`}
+                        isMissing={!val}
+                        isDemo={isDemo}
+                        isHighlighted={hoveredVar === key}
+                        onEditClick={showEditButton ? () => handleEditClick(key) : undefined}
+                      />
                     </button>
                   );
                 })}
@@ -384,10 +476,22 @@ export function EmailTab() {
           </div>
 
           <div className="mt-6 space-y-3 pt-4 border-t border-[var(--border-subtle)]">
+            <div>
+              <label className="block text-[11px] font-medium text-[var(--text-tertiary)] mb-1">Fecha de ingreso</label>
+              <input
+                id="agenda-field-startDateIso"
+                type="date"
+                value={(emailTemplate as any)?.startDateIso || employee.startDate}
+                onChange={e => updateEmailTemplate(selectedCase.id, { startDateIso: e.target.value } as any)}
+                disabled={isApproved}
+                className="w-full bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded px-2 py-1.5 text-xs text-[var(--text-primary)] focus-visible:outline-none focus-visible:border-[var(--border-focus)] disabled:opacity-50"
+              />
+            </div>
             {AGENDA_FIELDS.map(f => (
               <div key={f.key}>
                 <label className="block text-[11px] font-medium text-[var(--text-tertiary)] mb-1">{f.label}</label>
                 <input
+                  id={`agenda-field-${f.key}`}
                   type="text"
                   value={(emailTemplate as any)?.[f.key] || ''}
                   onChange={e => updateEmailTemplate(selectedCase.id, { [f.key]: e.target.value })}
@@ -450,45 +554,19 @@ export function EmailTab() {
         </div>
 
         {/* View Content */}
-        <div className="flex-1 overflow-y-auto bg-[var(--bg-base)] p-4 lg:p-8 flex justify-center">
+        <div className="flex-1 min-h-0 flex flex-col bg-[var(--bg-base)] p-4 lg:p-8 items-center overflow-y-auto">
 
           {activeView === 'preview' ? (
-            <div className="w-full max-w-2xl flex flex-col">
-              <div className="mb-4">
-                <h3 className="text-lg font-bold text-[var(--text-primary)]">Vista previa del email final</h3>
-                <p className="text-sm text-[var(--text-secondary)]">Así verá el colaborador el email cuando RRHH apruebe la plantilla.</p>
-              </div>
-              <div className="flex-1">
-                <WelcomeEmailPreview variables={variables} subject={emailTemplate?.subject || 'Bienvenido a Zafirus'} />
-              </div>
+            <div className="w-full max-w-2xl">
+              <WelcomeEmailPreview variables={variables} subject={emailTemplate?.subject || 'Bienvenido a Zafirus'} />
             </div>
           ) : (
-            <div className="w-full max-w-2xl flex flex-col h-full">
-              <div className="mb-4">
-                <h3 className="text-lg font-bold text-[var(--text-primary)]">Mensaje editable</h3>
-                <p className="text-sm text-[var(--text-secondary)]">Este contenido es el cuerpo interno del email. Las credenciales, agenda y enlaces se completan automáticamente.</p>
-                {!isApproved && (
-                  <div className="mt-2 flex items-center h-9">
-                    {showHint ? (
-                      <p className="text-xs text-[var(--status-info)] flex items-center gap-1.5 bg-[var(--status-info-subtle)] p-2 rounded border border-[var(--status-info)]/20 transition-opacity duration-500">
-                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                        Hacé clic en los chips de la barra lateral para insertar variables en el cursor.
-                      </p>
-                    ) : (
-                      <button
-                        onClick={() => setShowHint(true)}
-                        className="text-[var(--status-info)] hover:opacity-80 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary-glow)] rounded"
-                        title="Hacé clic en los chips de la barra lateral para insertar variables en el cursor."
-                        aria-label="Ver instrucciones del editor"
-                      >
-                        <AlertCircle className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex-1 bg-[var(--bg-elevated)] border border-[var(--border-focus)] rounded-xl overflow-hidden flex flex-col shadow-sm">
+            <div className="w-full max-w-2xl flex flex-col flex-1 min-h-0">
+              <div
+                className="flex-1 min-h-0 bg-[var(--bg-elevated)] border border-[var(--border-focus)] rounded-xl overflow-hidden flex flex-col shadow-sm"
+                onMouseOver={handleEditorMouseOver}
+                onMouseLeave={handleEditorMouseLeave}
+              >
                 <div className="px-4 py-3 border-b border-[var(--border-subtle)] flex items-center gap-3">
                   <span className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider w-16">Asunto:</span>
                   <input
@@ -513,6 +591,12 @@ export function EmailTab() {
                     isApproved && 'opacity-75 cursor-not-allowed'
                   )}
                 />
+
+                <div className="h-8 px-4 flex items-center border-t border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex-shrink-0">
+                  <span className="text-[11px] text-[var(--text-tertiary)]">
+                    {isApproved ? 'Plantilla aprobada · solo lectura' : 'Editando · hacé clic en las variables para insertarlas'}
+                  </span>
+                </div>
               </div>
             </div>
           )}

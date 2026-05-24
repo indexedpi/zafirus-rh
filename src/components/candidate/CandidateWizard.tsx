@@ -647,7 +647,7 @@ export function CandidateWizard({ token }: { token: string }) {
 
   if (!caseData) return null; // handled by CandidatePanel
 
-  if (caseData.candidateData?.submittedAt) {
+  if (caseData.candidateData?.submittedAt && !caseData.correctionNote) {
     return <SuccessState />;
   }
 
@@ -722,7 +722,7 @@ export function CandidateWizard({ token }: { token: string }) {
   };
 
   return (
-    <div className="flex flex-col min-h-full bg-[var(--bg-subtle)] pb-32 sm:pb-28">
+    <div className="flex min-h-full flex-col bg-[var(--bg-subtle)]">
       <div className="flex-1 w-full max-w-2xl mx-auto flex flex-col pt-2 sm:pt-6">
 
         <CandidateWelcomeHeader employeeName={employee.name} />
@@ -744,8 +744,8 @@ export function CandidateWizard({ token }: { token: string }) {
         </div>
       </div>
 
-      {/* Footer sticky bottom */}
-      <div className="fixed bottom-0 left-0 right-0 bg-[var(--bg-surface)] border-t border-[var(--border-subtle)] p-4 sm:p-5 z-20">
+      {/* Footer */}
+      <div className="shrink-0 bg-[var(--bg-surface)] border-t border-[var(--border-subtle)] p-4 sm:p-5">
         <div className="max-w-2xl mx-auto flex flex-col-reverse gap-3 sm:flex-row sm:gap-0 sm:items-center sm:justify-between">
           <Button
             variant="secondary"

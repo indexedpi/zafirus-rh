@@ -87,42 +87,25 @@ Ver [GitLab Workflow Guide](docs/guides/gitlab-workflow.md#-commits) para detall
 
 ```
 src/
-├── components/     # Componentes React/Angular
-│   ├── ui/         # Componentes de UI genéricos
-│   └── features/   # Componentes específicos de features
-├── store/          # Estado global
-├── types/          # Interfaces y tipos
-├── utils/          # Funciones utilitarias
-├── hooks/          # Custom hooks (React)
-└── services/       # Servicios/API calls
+├── components/
+│   ├── ui/             # Generic UI primitives (Button, Input, Modal, Toast…)
+│   ├── rrhh/           # RRHH panel — CaseList, CaseDetail, tabs, actions
+│   ├── candidate/      # Candidate intake wizard
+│   └── layout/         # TopBar, AuditDrawer
+├── lib/                # External integrations (Supabase persistence)
+├── store.ts            # Zustand global store — DO NOT MODIFY
+├── types.ts            # Product type contracts — DO NOT MODIFY
+└── utils/              # Helpers (cn, etc.)
 ```
 
 ## 🧪 Testing
 
-### Requisitos
+No automated test suite yet. QA is done manually against [docs/QA_CHECKLIST.md](docs/QA_CHECKLIST.md).
 
-- **Unit tests**: Para toda lógica de negocio
-- **Integration tests**: Para flujos completos
-- **E2E tests**: Para flujos críticos de usuario
-- **Coverage mínimo**: 80% para código nuevo
-
-### Ejecutar tests
+Before merging, run the build to confirm there are no type errors or bundle failures:
 
 ```bash
-# Todos los tests
-npm run test
-
-# Tests unitarios
-npm run test:unit
-
-# Tests de integración
-npm run test:integration
-
-# Tests E2E
-npm run test:e2e
-
-# Coverage
-npm run test:coverage
+npm run build
 ```
 
 ## 📚 Documentación
@@ -218,7 +201,7 @@ Ver `openspec/` para artefactos SDD.
 | Type errors | 0 |
 | Build time | < 30s |
 | Test time | < 2min |
-| Bundle size | < 500KB (gzipped) |
+| Bundle size | < 800KB (single-file HTML) |
 
 ## 🤝 Code of Conduct
 

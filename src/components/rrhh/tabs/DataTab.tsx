@@ -2,85 +2,142 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../../../store';
 import { Button } from '../../ui/Button';
 import {
-  Copy,
-  ExternalLink,
-  Clock,
-  CheckCircle2,
-  User,
-  MapPin,
-  Briefcase,
-  Shield,
-  Users,
-  Check,
-  FileText,
-  AlertTriangle,
-  Building
+  Copy, ExternalLink, Clock, CheckCircle2, User, MapPin, Briefcase,
+  Shield, Users, Check, AlertTriangle, Building2, Landmark, CreditCard,
 } from 'lucide-react';
 import { COUNTRIES, TEAMS, CONTRACT_TYPES, TAX_ID_TYPES, Employee } from '../../../types';
 import { cn } from '../../../utils/cn';
 
-// ─── SECTION HEADER SUBCOMPONENT ───
-interface SectionHeaderProps {
-  icon: React.ComponentType<any>;
-  title: string;
-  accentToken: string; // e.g., '--section-personal'
+// ─── SECTION COLOR PALETTE ───────────────────────────────────────────────────
+// Mirrors --section-* tokens in index.css, used for icon pill + label tint
+const C = {
+  directory:  '#459CDB',  // brand blue    — identity/profile
+  location:   '#27AE60',  // emerald       — location
+  work:       '#9B51E0',  // violet        — role/structure
+  fiscal:     '#F2994A',  // amber         — consolidated operational
+  candidate:  '#0891B2',  // cyan          — candidate declared data
+  docs:       '#64748B',  // slate         — documentation
+  payment:    '#2D9CDB',  // sky blue      — payment method
+} as const;
+
+// ─── CATEGORY HEADER ─────────────────────────────────────────────────────────
+
+interface CategoryHeaderProps {
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  label: string;
+  color: string;
+  helper?: string;
 }
 
-function SectionHeader({ icon: Icon, title, accentToken }: SectionHeaderProps) {
+function CategoryHeader({ icon: Icon, label, color, helper }: CategoryHeaderProps) {
   return (
-    <div className="border-b border-[var(--border-subtle)] pb-2.5 mb-4">
-
-      <div className="flex items-center gap-2.5 pl-2.5 border-l" style={{ borderLeftColor: `var(${accentToken})` }}>
-        <Icon className="w-4 h-4 text-[var(--text-secondary)]" aria-hidden="true" />
-        <h4 className="text-xs font-bold tracking-wider text-[var(--text-secondary)] uppercase">
-          {title}
-        </h4>
+    <div className="flex items-start gap-3 pb-3 mb-4 border-b border-[var(--border-subtle)]">
+      <span
+        className="flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0 mt-0.5"
+        style={{ backgroundColor: color + '18' }}
+        aria-hidden="true"
+      >
+        <Icon className="w-3.5 h-3.5" style={{ color }} />
+      </span>
+      <div className="min-w-0">
+        <span className="text-[11px] font-bold uppercase tracking-wider block leading-snug" style={{ color }}>
+          {label}
+        </span>
+        {helper && (
+          <span className="text-[11px] text-[var(--text-tertiary)] mt-0.5 block">{helper}</span>
+        )}
       </div>
     </div>
   );
 }
 
-// ─── EDITABLE FIELD SUBCOMPONENT ───
+// ─── STATUS BADGE ─────────────────────────────────────────────────────────────
+
+interface StatusBadgeProps {
+  submitted: boolean;
+  consolidated: boolean;
+  caseStatus: string;
+}
+
+function StatusBadge({ submitted, consolidated, caseStatus }: StatusBadgeProps) {
+  if (consolidated) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[var(--status-success)] bg-[var(--status-success-subtle)] px-2 py-0.5 rounded border border-[var(--status-success)]/20 flex-shrink-0 uppercase tracking-wider">
+        <Check className="w-3 h-3" aria-hidden="true" /> Consolidado
+      </span>
+    );
+  }
+  if (submitted) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[var(--status-info)] bg-[var(--status-info-subtle)] px-2 py-0.5 rounded border border-[var(--status-info)]/20 flex-shrink-0 uppercase tracking-wider">
+        <CheckCircle2 className="w-3 h-3" aria-hidden="true" /> Enviado
+      </span>
+    );
+  }
+  if (caseStatus === 'candidate_invited') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[var(--status-warning)] bg-[var(--status-warning-subtle)] px-2 py-0.5 rounded border border-[var(--status-warning)]/20 flex-shrink-0 uppercase tracking-wider">
+        <Clock className="w-3 h-3" aria-hidden="true" /> Esperando
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[var(--text-tertiary)] bg-[var(--bg-subtle)] px-2 py-0.5 rounded border border-[var(--border-default)] flex-shrink-0 uppercase tracking-wider">
+      <Clock className="w-3 h-3" aria-hidden="true" /> Pendiente
+    </span>
+  );
+}
+
+// ─── PAYMENT BADGE ────────────────────────────────────────────────────────────
+
+function PaymentBadge({ method }: { method: string | null }) {
+  if (!method) return null;
+  const styles: Record<string, string> = {
+    CBU:    'bg-[var(--status-success-subtle)] text-[var(--status-success)] border-[var(--status-success)]/15',
+    WIRE:   'bg-[var(--status-info-subtle)] text-[var(--status-info)] border-[var(--status-info)]/15',
+    CRYPTO: 'bg-[var(--status-warning-subtle)] text-[var(--status-warning)] border-[var(--status-warning)]/15',
+  };
+  return (
+    <span className={cn(
+      'text-[10px] font-bold px-1.5 py-0.5 rounded border font-mono uppercase tracking-wider',
+      styles[method] ?? 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] border-[var(--border-default)]'
+    )}>
+      {method}
+    </span>
+  );
+}
+
+// ─── EDITABLE FIELD ───────────────────────────────────────────────────────────
+// Full behavior preserved: Enter saves, Escape cancels, blur saves if changed,
+// tab order works, copy button, "Guardado" feedback, missing state.
+
 interface EditableFieldProps {
   label: string;
   value: string | null;
   fieldKey: keyof Employee;
   type?: 'text' | 'date' | 'select';
   options?: { value: string; label: string }[];
+  copyable?: boolean;
   editingField: string | null;
   setEditingField: (key: string | null) => void;
   onSave: (fieldKey: keyof Employee, value: any) => void;
 }
 
 function EditableField({
-  label,
-  value,
-  fieldKey,
-  type = 'text',
-  options = [],
-  editingField,
-  setEditingField,
-  onSave,
-  copyable = false
-}: EditableFieldProps & { copyable?: boolean }) {
+  label, value, fieldKey, type = 'text', options = [],
+  copyable = false, editingField, setEditingField, onSave,
+}: EditableFieldProps) {
   const isEditing = editingField === fieldKey;
   const [localVal, setLocalVal] = useState(value || '');
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isEditing) {
-      setLocalVal(value || '');
-    }
+    if (isEditing) setLocalVal(value || '');
   }, [value, isEditing]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleSave();
-    } else if (e.key === 'Escape') {
-      setLocalVal(value || '');
-      setEditingField(null);
-    }
+    if (e.key === 'Enter') { e.preventDefault(); handleSave(); }
+    else if (e.key === 'Escape') { setLocalVal(value || ''); setEditingField(null); }
   };
 
   const handleSave = () => {
@@ -92,10 +149,6 @@ function EditableField({
     setEditingField(null);
   };
 
-  const handleBlur = () => {
-    handleSave();
-  };
-
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (value) {
@@ -104,47 +157,10 @@ function EditableField({
     }
   };
 
-  if (isEditing) {
-    return (
-      <div className="flex flex-col gap-1.5 min-w-0 min-h-[52px] justify-center">
-        <span className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider leading-none">
-          {label}
-        </span>
-        {type === 'select' ? (
-          <select
-            autoFocus
-            value={localVal}
-            onChange={(e) => setLocalVal(e.target.value)}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
-            className="w-full bg-[var(--bg-elevated)] border border-[var(--border-focus)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary-glow)] min-h-[44px] transition-[border-color,box-shadow] duration-150 cursor-pointer"
-          >
-            <option value="" disabled>Seleccionar...</option>
-            {options.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <input
-            autoFocus
-            type={type}
-            value={localVal}
-            onChange={(e) => setLocalVal(e.target.value)}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
-            className="w-full bg-[var(--bg-elevated)] border border-[var(--border-focus)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary-glow)] min-h-[44px] transition-[border-color,box-shadow] duration-150"
-          />
-        )}
-      </div>
-    );
-  }
-
   const displayValue = () => {
     if (!value) return <span className="text-[var(--text-disabled)] italic font-normal">No especificado</span>;
     if (type === 'select') {
-      const found = options.find((o) => o.value === value);
+      const found = options.find(o => o.value === value);
       return found ? found.label : value;
     }
     if (type === 'date') {
@@ -153,22 +169,54 @@ function EditableField({
     return value;
   };
 
+  if (isEditing) {
+    return (
+      <div className="flex flex-col gap-1.5 min-w-0 min-h-[52px] justify-center">
+        <span className="text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
+          {label}
+        </span>
+        {type === 'select' ? (
+          <select
+            autoFocus
+            value={localVal}
+            onChange={e => setLocalVal(e.target.value)}
+            onBlur={handleSave}
+            onKeyDown={handleKeyDown}
+            className="w-full bg-[var(--bg-elevated)] border border-[var(--border-focus)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary-glow)] min-h-[44px] transition-[border-color,box-shadow] duration-150 cursor-pointer"
+          >
+            <option value="" disabled>Seleccionar...</option>
+            {options.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        ) : (
+          <input
+            autoFocus
+            type={type}
+            value={localVal}
+            onChange={e => setLocalVal(e.target.value)}
+            onBlur={handleSave}
+            onKeyDown={handleKeyDown}
+            className="w-full bg-[var(--bg-elevated)] border border-[var(--border-focus)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary-glow)] min-h-[44px] transition-[border-color,box-shadow] duration-150"
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
-      onClick={() => setEditingField(fieldKey)}
       className="flex flex-col gap-0.5 min-w-0 cursor-pointer group p-2 hover:bg-[var(--bg-subtle)] rounded-lg border border-transparent hover:border-[var(--border-default)] min-h-[52px] justify-center transition-[background-color,border-color] duration-150 focus-visible:outline-none focus-visible:border-[var(--border-focus)] focus-visible:ring-1 focus-visible:ring-[var(--brand-primary-glow)]"
+      onClick={() => setEditingField(fieldKey)}
       role="button"
       tabIndex={0}
       aria-label={`Editar ${label}`}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          setEditingField(fieldKey);
-        }
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingField(fieldKey); }
       }}
     >
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider leading-none">
+        <span className="text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
           {label}
         </span>
         {saveStatus && (
@@ -177,10 +225,9 @@ function EditableField({
           </span>
         )}
       </div>
-      <div className="relative mt-1">
-        <span className={cn(
-          'text-sm font-medium block truncate',
-          !value ? 'text-[var(--text-disabled)] font-light' : 'text-[var(--text-primary)]'
+      <div className="relative mt-0.5">
+        <span className={cn('text-sm font-medium block truncate',
+          !value ? 'text-[var(--text-disabled)] font-light italic' : 'text-[var(--text-primary)]'
         )}>
           {displayValue()}
         </span>
@@ -190,93 +237,109 @@ function EditableField({
               type="button"
               onClick={handleCopy}
               className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
-              title="Copiar"
-              aria-label="Copiar valor"
+              aria-label={`Copiar ${label}`}
             >
               <Copy className="w-3.5 h-3.5" />
             </button>
           )}
-          <span className="text-[10px] text-[var(--brand-primary)] uppercase font-bold pr-1">
-            editar
-          </span>
+          <span className="text-[10px] text-[var(--brand-primary)] uppercase font-bold pr-1">editar</span>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── CHECK ITEM SUBCOMPONENT ───
-interface CheckItemProps {
-  label: string;
-  done: boolean;
-}
+// ─── CHECK ITEM ───────────────────────────────────────────────────────────────
 
-function CheckItem({ label, done }: CheckItemProps) {
+function CheckItem({ label, done }: { label: string; done: boolean }) {
   return (
-    <div className="flex items-center gap-2 py-1">
-      {done ? (
-        <CheckCircle2 className="w-4 h-4 text-[var(--status-success)] flex-shrink-0" aria-hidden="true" />
-      ) : (
-        <div className="w-4 h-4 rounded-full border border-[var(--border-default)] flex-shrink-0" aria-hidden="true" />
-      )}
-      <span className={cn('text-xs transition-colors duration-150', done ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]')}>
+    <div className="flex items-center gap-2 py-0.5">
+      {done
+        ? <CheckCircle2 className="w-3.5 h-3.5 text-[var(--status-success)] flex-shrink-0" aria-hidden="true" />
+        : <div className="w-3.5 h-3.5 rounded-full border-2 border-[var(--border-default)] flex-shrink-0" aria-hidden="true" />
+      }
+      <span className={cn('text-xs', done ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]')}>
         {label}
       </span>
     </div>
   );
 }
 
-// ─── STATUS INDICATOR SUBCOMPONENT ───
-interface StatusIndicatorProps {
-  submitted: boolean;
-  consolidated: boolean;
-  status: string;
-}
+// ─── DATA READINESS STRIP ─────────────────────────────────────────────────────
 
-function StatusIndicator({ submitted, consolidated, status }: StatusIndicatorProps) {
-  let text = 'Pendiente';
-  let colorToken = 'var(--text-tertiary)';
+function DataReadinessStrip({ selectedCase }: { selectedCase: any }) {
+  const { employee, candidateData, status } = selectedCase;
 
-  if (consolidated) {
-    text = 'Consolidado';
-    colorToken = 'var(--status-success)';
-  } else if (submitted) {
-    text = 'Enviado';
-    colorToken = 'var(--status-info)';
-  } else if (status === 'candidate_invited') {
-    text = 'Invitado';
-    colorToken = 'var(--status-warning)';
-  }
+  const consolidated = candidateData?.consolidated === true;
+  const submitted    = candidateData?.submittedAt != null;
+
+  // Operational fields completeness: CUIT + CBU + corporateEmail
+  const opFilled = [employee.CUIT, employee.CBU, employee.corporateEmail].filter(Boolean).length;
+
+  const needsDocs = candidateData?.needsW8 || candidateData?.hasQrBinance;
+  const hasDocs   = (candidateData?.files?.length ?? 0) > 0;
+
+  const candidateColor = consolidated ? 'var(--status-success)'
+    : submitted ? 'var(--status-info)'
+    : 'var(--text-tertiary)';
+
+  const candidateLabel = consolidated     ? 'Candidato consolidado'
+    : submitted                           ? 'Formulario recibido'
+    : status === 'candidate_invited'      ? 'Candidato invitado'
+    : 'Formulario pendiente';
+
+  const opColor = opFilled === 3 ? 'var(--status-success)'
+    : opFilled > 0               ? 'var(--status-warning)'
+    : 'var(--text-tertiary)';
 
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide">
-      <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: colorToken }} />
-      <span style={{ color: colorToken }}>{text}</span>
-    </span>
+    <div
+      className="flex flex-wrap items-center gap-x-3 gap-y-2 bg-[var(--bg-surface)] rounded-xl border border-[var(--border-default)] px-4 py-3"
+      style={{ boxShadow: 'var(--shadow-sm)' }}
+    >
+      <span className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider flex-shrink-0">
+        Estado
+      </span>
+      <span className="w-px h-4 bg-[var(--border-subtle)] flex-shrink-0" aria-hidden="true" />
+
+      {/* Candidate signal */}
+      <span className="inline-flex items-center gap-1.5 text-[11px] font-medium flex-shrink-0" style={{ color: candidateColor }}>
+        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: candidateColor }} aria-hidden="true" />
+        {candidateLabel}
+      </span>
+
+      <span className="w-px h-4 bg-[var(--border-subtle)] flex-shrink-0 hidden sm:block" aria-hidden="true" />
+
+      {/* Operational fields */}
+      <span className="inline-flex items-center gap-1.5 text-[11px] font-medium flex-shrink-0" style={{ color: opColor }}>
+        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: opColor }} aria-hidden="true" />
+        Datos operativos {opFilled}/3
+      </span>
+
+      {needsDocs && (
+        <>
+          <span className="w-px h-4 bg-[var(--border-subtle)] flex-shrink-0 hidden sm:block" aria-hidden="true" />
+          <span
+            className="inline-flex items-center gap-1.5 text-[11px] font-medium flex-shrink-0"
+            style={{ color: hasDocs ? 'var(--status-success)' : 'var(--status-warning)' }}
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+              style={{ backgroundColor: hasDocs ? 'var(--status-success)' : 'var(--status-warning)' }}
+              aria-hidden="true"
+            />
+            {hasDocs ? 'Documentación declarada' : 'Documentación pendiente'}
+          </span>
+        </>
+      )}
+    </div>
   );
 }
 
-// ─── PAYMENT BADGE SUBCOMPONENT ───
-interface PaymentBadgeProps {
-  method: string | null;
-}
+// ─── VALIDATION MODULE ────────────────────────────────────────────────────────
+// Secondary sticky panel: readiness signals with color-coded items
 
-function PaymentBadge({ method }: PaymentBadgeProps) {
-  if (!method) return null;
-  const styles: Record<string, string> = {
-    CBU: 'bg-[var(--status-success-subtle)] text-[var(--status-success)] border border-[var(--status-success)]/15',
-    WIRE: 'bg-[var(--status-info-subtle)] text-[var(--status-info)] border border-[var(--status-info)]/15',
-    CRYPTO: 'bg-[var(--status-warning-subtle)] text-[var(--status-warning)] border border-[var(--status-warning)]/15',
-  };
-  return (
-    <span className={cn('text-xs font-semibold px-2 py-0.5 rounded border font-mono uppercase tracking-wider', styles[method] || 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] border-[var(--border-default)]')}>
-      {method}
-    </span>
-  );
-}
-
-// ─── PROFILE SUMMARY PANEL SUBCOMPONENT ───
-interface ProfileSummaryPanelProps {
+interface ValidationModuleProps {
   selectedCase: any;
   isPaymentComplete: boolean;
   fiscalStepDone: boolean;
@@ -285,26 +348,21 @@ interface ProfileSummaryPanelProps {
   qrStepDone: boolean;
 }
 
-function ProfileSummaryPanel({
-  selectedCase,
-  isPaymentComplete,
-  fiscalStepDone,
-  referencesStepDone,
-  w8StepDone,
-  qrStepDone,
-}: ProfileSummaryPanelProps) {
+function ValidationModule({
+  selectedCase, isPaymentComplete, fiscalStepDone,
+  referencesStepDone, w8StepDone, qrStepDone,
+}: ValidationModuleProps) {
   const { employee, candidateData } = selectedCase;
-  const candidateConsolidated = candidateData?.consolidated === true;
-  const candidateSubmitted = candidateData?.submittedAt != null;
+  const consolidated = candidateData?.consolidated === true;
 
-  const toReview = [];
-  const toActivate = [];
-  const ready = [];
+  const toReview:   string[] = [];
+  const toActivate: string[] = [];
+  const ready:      string[] = [];
 
   if (employee.CUIT) {
     ready.push('CUIT consolidado');
   } else if (fiscalStepDone) {
-    toReview.push('CUIT declarado (pendiente consolidar)');
+    toReview.push('CUIT declarado — consolidar');
   } else {
     toActivate.push('CUIT pendiente');
   }
@@ -312,9 +370,9 @@ function ProfileSummaryPanel({
   if (employee.CBU) {
     ready.push('CBU consolidado');
   } else if (isPaymentComplete) {
-    toReview.push('CBU declarado (pendiente consolidar)');
+    toReview.push('Cobro declarado — consolidar');
   } else {
-    toActivate.push('CBU pendiente');
+    toActivate.push('Datos de cobro pendientes');
   }
 
   if (referencesStepDone) {
@@ -324,7 +382,7 @@ function ProfileSummaryPanel({
   }
 
   const needsFiles = candidateData?.needsW8 || candidateData?.hasQrBinance;
-  const hasFiles = candidateData?.files && candidateData.files.length > 0;
+  const hasFiles   = (candidateData?.files?.length ?? 0) > 0;
   if (!needsFiles) {
     ready.push('Documentación validada');
   } else if (hasFiles) {
@@ -339,60 +397,74 @@ function ProfileSummaryPanel({
     ready.push('Email corporativo listo');
   }
 
-  if (candidateConsolidated) {
-    ready.push('Datos consolidados');
-  }
+  if (consolidated) ready.push('Datos consolidados');
 
   return (
-    <div className="bg-[var(--bg-surface)] rounded-xl border border-[var(--border-default)] p-6 shadow-md">
-      <SectionHeader icon={Shield} title="Validación de datos" accentToken="--brand-primary" />
+    <div
+      className="bg-[var(--bg-surface)] rounded-xl border border-[var(--border-default)] p-4"
+      style={{ boxShadow: 'var(--shadow-sm)' }}
+    >
+      <CategoryHeader
+        icon={Shield}
+        label="Validación"
+        color={C.directory}
+        helper="Completitud del caso"
+      />
 
-      <div className="space-y-6 text-xs">
+      <div className="space-y-4 text-xs">
         {toReview.length > 0 && (
           <div>
-            <h4 className="text-[11px] font-semibold text-[var(--status-warning)] uppercase tracking-wider mb-2">Faltan para revisar</h4>
-            <ul className="space-y-1.5">
+            <span className="text-[10px] font-bold text-[var(--status-warning)] uppercase tracking-wider block mb-2">
+              Para revisar
+            </span>
+            <div className="space-y-1.5">
               {toReview.map((item, i) => (
-                <li key={i} className="flex items-center gap-2 text-[var(--text-primary)]">
-                  <div className="w-1 h-1 rounded-full bg-[var(--status-warning)]" />
-                  {item}
-                </li>
+                <div key={i} className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-[var(--status-warning-subtle)] border border-[var(--status-warning)]/15">
+                  <AlertTriangle className="w-3 h-3 text-[var(--status-warning)] flex-shrink-0" aria-hidden="true" />
+                  <span className="text-[var(--text-primary)]">{item}</span>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         )}
 
         {toActivate.length > 0 && (
           <div>
-            <h4 className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Faltan para activar</h4>
-            <ul className="space-y-1.5">
+            <span className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider block mb-2">
+              Pendientes
+            </span>
+            <div className="space-y-1">
               {toActivate.map((item, i) => (
-                <li key={i} className="flex items-center gap-2 text-[var(--text-secondary)]">
-                  <div className="w-1 h-1 rounded-full bg-[var(--text-tertiary)]" />
-                  {item}
-                </li>
+                <div key={i} className="flex items-center gap-2 py-1 px-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[var(--border-default)] flex-shrink-0" aria-hidden="true" />
+                  <span className="text-[var(--text-secondary)]">{item}</span>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         )}
 
         {ready.length > 0 && (
           <div>
-            <h4 className="text-[11px] font-semibold text-[var(--status-success)] uppercase tracking-wider mb-2">Listo</h4>
-            <ul className="space-y-1.5">
+            <span className="text-[10px] font-bold text-[var(--status-success)] uppercase tracking-wider block mb-2">
+              Listo
+            </span>
+            <div className="space-y-1">
               {ready.map((item, i) => (
-                <li key={i} className="flex items-center gap-2 text-[var(--text-secondary)]">
-                  <Check className="w-3.5 h-3.5 text-[var(--status-success)] flex-shrink-0" />
-                  {item}
-                </li>
+                <div key={i} className="flex items-center gap-2 py-1 px-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[var(--status-success)] flex-shrink-0" aria-hidden="true" />
+                  <span className="text-[var(--text-secondary)]">{item}</span>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         )}
       </div>
     </div>
   );
 }
+
+// ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
 export function DataTab() {
   const { getSelectedCase, updateEmployee, consolidateCandidateData, sendCandidateForm, addToast } = useStore();
@@ -414,434 +486,460 @@ export function DataTab() {
     addToast({ type: 'success', title: 'Enlace copiado al portapapeles' });
   };
 
-  const handleConsolidate = () => {
-    consolidateCandidateData(selectedCase.id);
-  };
-
-  const handleSendInvite = () => {
-    sendCandidateForm(selectedCase.id);
-  };
-
-  const candidateSubmitted = candidateData?.submittedAt != null;
+  const candidateSubmitted    = candidateData?.submittedAt != null;
   const candidateConsolidated = candidateData?.consolidated === true;
 
-  // Payment completeness by selected method
   const isPaymentComplete = (() => {
     if (!candidateData) return false;
-    if (candidateData.paymentMethod === 'CBU') {
-      return !!candidateData.cbu;
-    }
-    if (candidateData.paymentMethod === 'WIRE') {
-      return !!candidateData.bankName && !!candidateData.accountNumber && !!candidateData.swift;
-    }
-    if (candidateData.paymentMethod === 'CRYPTO') {
-      return !!candidateData.walletType && !!candidateData.walletAddress;
-    }
+    if (candidateData.paymentMethod === 'CBU')    return !!candidateData.cbu;
+    if (candidateData.paymentMethod === 'WIRE')   return !!candidateData.bankName && !!candidateData.accountNumber && !!candidateData.swift;
+    if (candidateData.paymentMethod === 'CRYPTO') return !!candidateData.walletType && !!candidateData.walletAddress;
     return false;
   })();
 
-  // Candidate info rows
-  const taxIdType = TAX_ID_TYPES.find(t => t.code === candidateData?.taxIdType);
-
-  // Dynamic steps verification
-  const fiscalStepDone = !!candidateData?.taxIdType && !!candidateData?.taxIdValue;
+  const taxIdType         = TAX_ID_TYPES.find(t => t.code === candidateData?.taxIdType);
+  const fiscalStepDone    = !!candidateData?.taxIdType && !!candidateData?.taxIdValue;
   const referencesStepDone = (candidateData?.references?.length ?? 0) > 0;
-  const w8StepDone = !candidateData?.needsW8 || (candidateData?.files?.some(f => f.fileType === 'w8') ?? false);
-  const qrStepDone = !candidateData?.hasQrBinance || (candidateData?.files?.some(f => f.fileType === 'qr_binance') ?? false);
-  const paymentStepDone = isPaymentComplete;
+  const w8StepDone        = !candidateData?.needsW8 || (candidateData?.files?.some(f => f.fileType === 'w8') ?? false);
+  const qrStepDone        = !candidateData?.hasQrBinance || (candidateData?.files?.some(f => f.fileType === 'qr_binance') ?? false);
 
   return (
-    <div className="space-y-6">
-      {/* ─── Main Split Layout ─── */}
-      <div className="flex flex-col lg:flex-row items-start gap-6 relative">
-        {/* Left Column (Cards) */}
-        <div className="flex-1 w-full space-y-6 min-w-0">
-          {/* Employee Data Card */}
-          <div className="bg-[var(--bg-elevated)] rounded-xl border border-[var(--border-subtle)] p-6" style={{ boxShadow: 'var(--shadow-sm)' }}>
-            <SectionHeader icon={User} title="Datos de Directorio del Empleado" accentToken="--section-personal" />
+    <div className="space-y-4 pb-6">
+      {/* ── Data readiness strip ── */}
+      <DataReadinessStrip selectedCase={selectedCase} />
 
-            <div className="space-y-6">
-              {/* Personal Data */}
-              <div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <EditableField
-                    label="Nombre"
-                    value={employee.name}
-                    fieldKey="name"
-                    copyable
-                    editingField={editingField}
-                    setEditingField={setEditingField}
-                    onSave={handleFieldSave}
-                  />
-                  <EditableField
-                    label="Apellido"
-                    value={employee.lastName}
-                    fieldKey="lastName"
-                    copyable
-                    editingField={editingField}
-                    setEditingField={setEditingField}
-                    onSave={handleFieldSave}
-                  />
-                  <EditableField
-                    label="Email Personal"
-                    value={employee.email}
-                    fieldKey="email"
-                    copyable
-                    editingField={editingField}
-                    setEditingField={setEditingField}
-                    onSave={handleFieldSave}
-                  />
-                  <EditableField
-                    label="Documento / DNI"
-                    value={employee.CI}
-                    fieldKey="CI"
-                    copyable
-                    editingField={editingField}
-                    setEditingField={setEditingField}
-                    onSave={handleFieldSave}
-                  />
-                  <EditableField
-                    label="Fecha de Nacimiento"
-                    value={employee.birthday}
-                    fieldKey="birthday"
-                    type="date"
-                    editingField={editingField}
-                    setEditingField={setEditingField}
-                    onSave={handleFieldSave}
-                  />
-                </div>
+      {/* ── Main split layout ── */}
+      <div className="flex flex-col lg:flex-row items-start gap-4">
+
+        {/* Primary column: category section cards */}
+        <div className="flex-1 w-full space-y-4 min-w-0">
+
+          {/* ─ Directorio operativo ─ */}
+          <div
+            className="bg-[var(--bg-surface)] rounded-xl border border-[var(--border-subtle)] p-4"
+            style={{ boxShadow: 'var(--shadow-sm)' }}
+          >
+            <CategoryHeader
+              icon={User}
+              label="Directorio operativo"
+              color={C.directory}
+              helper="Datos identificatorios del empleado"
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div id="dtab-field-name">
+                <EditableField
+                  label="Nombre" value={employee.name} fieldKey="name" copyable
+                  editingField={editingField} setEditingField={setEditingField} onSave={handleFieldSave}
+                />
               </div>
+              <EditableField
+                label="Apellido" value={employee.lastName} fieldKey="lastName" copyable
+                editingField={editingField} setEditingField={setEditingField} onSave={handleFieldSave}
+              />
+              <EditableField
+                label="Email personal" value={employee.email} fieldKey="email" copyable
+                editingField={editingField} setEditingField={setEditingField} onSave={handleFieldSave}
+              />
+              <EditableField
+                label="Documento / DNI" value={employee.CI} fieldKey="CI" copyable
+                editingField={editingField} setEditingField={setEditingField} onSave={handleFieldSave}
+              />
+              <EditableField
+                label="Fecha de nacimiento" value={employee.birthday} fieldKey="birthday" type="date"
+                editingField={editingField} setEditingField={setEditingField} onSave={handleFieldSave}
+              />
+            </div>
+          </div>
 
-              {/* Location */}
-              <div>
-                <SectionHeader icon={MapPin} title="Ubicación Física Principal" accentToken="--section-location" />
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <EditableField
-                    label="País"
-                    value={employee.countryId}
-                    fieldKey="countryId"
-                    type="select"
-                    options={COUNTRIES.map(c => ({ value: c.code, label: c.name }))}
-                    editingField={editingField}
-                    setEditingField={setEditingField}
-                    onSave={handleFieldSave}
-                  />
-                  <EditableField
-                    label="Provincia / Estado"
-                    value={employee.provinceId}
-                    fieldKey="provinceId"
-                    editingField={editingField}
-                    setEditingField={setEditingField}
-                    onSave={handleFieldSave}
-                  />
-                  <EditableField
-                    label="Ciudad"
-                    value={employee.cityId}
-                    fieldKey="cityId"
-                    editingField={editingField}
-                    setEditingField={setEditingField}
-                    onSave={handleFieldSave}
-                  />
-                </div>
+          {/* ─ Ubicación ─ */}
+          <div
+            className="bg-[var(--bg-surface)] rounded-xl border border-[var(--border-subtle)] p-4"
+            style={{ boxShadow: 'var(--shadow-sm)' }}
+          >
+            <CategoryHeader
+              icon={MapPin}
+              label="Ubicación"
+              color={C.location}
+              helper="País, provincia y ciudad de residencia"
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <EditableField
+                label="País" value={employee.countryId} fieldKey="countryId" type="select"
+                options={COUNTRIES.map(c => ({ value: c.code, label: c.name }))}
+                editingField={editingField} setEditingField={setEditingField} onSave={handleFieldSave}
+              />
+              <EditableField
+                label="Provincia / Estado" value={employee.provinceId} fieldKey="provinceId"
+                editingField={editingField} setEditingField={setEditingField} onSave={handleFieldSave}
+              />
+              <EditableField
+                label="Ciudad" value={employee.cityId} fieldKey="cityId"
+                editingField={editingField} setEditingField={setEditingField} onSave={handleFieldSave}
+              />
+            </div>
+          </div>
+
+          {/* ─ Rol y estructura ─ */}
+          <div
+            className="bg-[var(--bg-surface)] rounded-xl border border-[var(--border-subtle)] p-4"
+            style={{ boxShadow: 'var(--shadow-sm)' }}
+          >
+            <CategoryHeader
+              icon={Briefcase}
+              label="Rol y estructura"
+              color={C.work}
+              helper="Asignación operativa y dependencia funcional"
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div id="dtab-field-startDate">
+                <EditableField
+                  label="Fecha de inicio" value={employee.startDate} fieldKey="startDate" type="date"
+                  editingField={editingField} setEditingField={setEditingField} onSave={handleFieldSave}
+                />
               </div>
-
-              {/* Work Position */}
-              <div>
-                <SectionHeader icon={Briefcase} title="Asignación Operativa" accentToken="--section-work" />
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <EditableField
-                    label="Fecha de Inicio"
-                    value={employee.startDate}
-                    fieldKey="startDate"
-                    type="date"
-                    editingField={editingField}
-                    setEditingField={setEditingField}
-                    onSave={handleFieldSave}
-                  />
-                  <EditableField
-                    label="Rol / Puesto"
-                    value={employee.role}
-                    fieldKey="role"
-                    editingField={editingField}
-                    setEditingField={setEditingField}
-                    onSave={handleFieldSave}
-                  />
-                  <EditableField
-                    label="Equipo"
-                    value={employee.team}
-                    fieldKey="team"
-                    type="select"
-                    options={TEAMS}
-                    editingField={editingField}
-                    setEditingField={setEditingField}
-                    onSave={handleFieldSave}
-                  />
-                  <EditableField
-                    label="Tipo de Contrato"
-                    value={employee.contractType}
-                    fieldKey="contractType"
-                    type="select"
-                    options={CONTRACT_TYPES}
-                    editingField={editingField}
-                    setEditingField={setEditingField}
-                    onSave={handleFieldSave}
-                  />
-                  <EditableField
-                    label="Responsable Directo"
-                    value={employee.managerName}
-                    fieldKey="managerName"
-                    editingField={editingField}
-                    setEditingField={setEditingField}
-                    onSave={handleFieldSave}
-                  />
-                </div>
-              </div>
-
-              {/* Consolidated Data */}
-              <div>
-                <SectionHeader icon={CheckCircle2} title="Datos Fiscales y de Cobro Consolidados" accentToken="--section-fiscal" />
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <EditableField
-                    label="CUIT / CUIL Consolidado"
-                    value={employee.CUIT}
-                    fieldKey="CUIT"
-                    editingField={editingField}
-                    setEditingField={setEditingField}
-                    onSave={handleFieldSave}
-                  />
-                  <EditableField
-                    label="CBU Consolidado"
-                    value={employee.CBU}
-                    fieldKey="CBU"
-                    editingField={editingField}
-                    setEditingField={setEditingField}
-                    onSave={handleFieldSave}
-                  />
-                  <EditableField
-                    label="Email Corporativo"
-                    value={employee.corporateEmail}
-                    fieldKey="corporateEmail"
-                    copyable
-                    editingField={editingField}
-                    setEditingField={setEditingField}
-                    onSave={handleFieldSave}
-                  />
-                </div>
+              <EditableField
+                label="Rol / Puesto" value={employee.role} fieldKey="role"
+                editingField={editingField} setEditingField={setEditingField} onSave={handleFieldSave}
+              />
+              <EditableField
+                label="Equipo" value={employee.team} fieldKey="team" type="select" options={TEAMS}
+                editingField={editingField} setEditingField={setEditingField} onSave={handleFieldSave}
+              />
+              <EditableField
+                label="Tipo de contrato" value={employee.contractType} fieldKey="contractType" type="select" options={CONTRACT_TYPES}
+                editingField={editingField} setEditingField={setEditingField} onSave={handleFieldSave}
+              />
+              <div id="dtab-field-managerName">
+                <EditableField
+                  label="Responsable directo" value={employee.managerName} fieldKey="managerName"
+                  editingField={editingField} setEditingField={setEditingField} onSave={handleFieldSave}
+                />
               </div>
             </div>
           </div>
 
-          {/* Candidate Data Card */}
-          <div className="bg-[var(--bg-elevated)] rounded-xl border border-[var(--border-subtle)] p-6" style={{ boxShadow: 'var(--shadow-sm)' }}>
-            <div className="flex items-center justify-between mb-4">
-              <SectionHeader icon={Users} title="Declaración Jurada del Candidato" accentToken="--section-payment" />
-              <StatusIndicator submitted={candidateSubmitted} consolidated={candidateConsolidated} status={status} />
+          {/* ─ Datos operativos (post-consolidación) ─ */}
+          <div
+            className="bg-[var(--bg-surface)] rounded-xl border border-[var(--border-subtle)] p-4"
+            style={{ boxShadow: 'var(--shadow-sm)' }}
+          >
+            <CategoryHeader
+              icon={Building2}
+              label="Datos operativos"
+              color={C.fiscal}
+              helper="Campos completados post-consolidación del candidato"
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <EditableField
+                label="CUIT / CUIL" value={employee.CUIT} fieldKey="CUIT"
+                editingField={editingField} setEditingField={setEditingField} onSave={handleFieldSave}
+              />
+              <EditableField
+                label="CBU" value={employee.CBU} fieldKey="CBU"
+                editingField={editingField} setEditingField={setEditingField} onSave={handleFieldSave}
+              />
+              <div id="dtab-field-corporateEmail">
+                <EditableField
+                  label="Email corporativo" value={employee.corporateEmail} fieldKey="corporateEmail" copyable
+                  editingField={editingField} setEditingField={setEditingField} onSave={handleFieldSave}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ─ Declaración del candidato ─ */}
+          <div
+            className="bg-[var(--bg-surface)] rounded-xl border border-[var(--border-subtle)] p-4"
+            style={{ boxShadow: 'var(--shadow-sm)' }}
+          >
+            {/* Section header with status badge */}
+            <div className="flex items-start justify-between gap-3 pb-3 mb-4 border-b border-[var(--border-subtle)]">
+              <div className="flex items-start gap-3 min-w-0">
+                <span
+                  className="flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0 mt-0.5"
+                  style={{ backgroundColor: C.candidate + '18' }}
+                  aria-hidden="true"
+                >
+                  <Users className="w-3.5 h-3.5" style={{ color: C.candidate }} />
+                </span>
+                <div className="min-w-0">
+                  <span className="text-[11px] font-bold uppercase tracking-wider block leading-snug" style={{ color: C.candidate }}>
+                    Declaración del candidato
+                  </span>
+                  <span className="text-[11px] text-[var(--text-tertiary)] mt-0.5 block">
+                    Datos declarados en el formulario de ingreso
+                  </span>
+                </div>
+              </div>
+              <StatusBadge
+                submitted={candidateSubmitted}
+                consolidated={candidateConsolidated}
+                caseStatus={status}
+              />
             </div>
 
-            {/* ── State 1: No invite yet ── */}
+            {/* State 1: draft, form not sent */}
             {!candidateSubmitted && status === 'draft' && (
-              <div className="text-center py-8 bg-[var(--bg-surface)] rounded-lg border border-[var(--border-subtle)] flex flex-col items-center">
-                <Clock className="w-10 h-10 text-[var(--text-tertiary)] mb-3 animate-pulse" />
-                <p className="text-sm font-medium text-[var(--text-secondary)] max-w-md">
-                  El portal de declaración jurada no ha sido enviado.
+              <div className="py-8 bg-[var(--bg-subtle)] rounded-xl border border-[var(--border-subtle)] flex flex-col items-center text-center px-4">
+                <Clock className="w-10 h-10 text-[var(--text-tertiary)] mb-3" aria-hidden="true" />
+                <p className="text-sm font-medium text-[var(--text-secondary)]">
+                  El formulario no fue enviado.
                 </p>
                 <p className="text-xs text-[var(--text-tertiary)] mt-1 max-w-sm mb-4">
-                  Envía el formulario al candidato para iniciar la carga de datos.
+                  Enviá el formulario al candidato para que cargue sus datos fiscales y de cobro.
                 </p>
-                <Button onClick={handleSendInvite} className="min-h-[44px]">
+                <Button onClick={() => sendCandidateForm(selectedCase.id)} className="min-h-[44px]">
                   Enviar formulario de onboarding
                 </Button>
               </div>
             )}
 
-            {/* ── State 2: Invited but not submitted ── */}
+            {/* State 2: invited, waiting */}
             {!candidateSubmitted && status === 'candidate_invited' && (
-              <div className="text-center py-8 bg-[var(--bg-surface)] rounded-lg border border-[var(--border-subtle)] flex flex-col items-center">
-                <Clock className="w-10 h-10 text-[var(--text-tertiary)] mb-3" />
-                <p className="text-sm font-medium text-[var(--text-secondary)] max-w-md">
+              <div className="py-8 bg-[var(--bg-subtle)] rounded-xl border border-[var(--border-subtle)] flex flex-col items-center text-center px-4">
+                <Clock className="w-10 h-10 text-[var(--text-tertiary)] mb-3" aria-hidden="true" />
+                <p className="text-sm font-medium text-[var(--text-secondary)]">
                   Esperando respuesta del candidato.
                 </p>
                 <p className="text-xs text-[var(--text-tertiary)] mt-1 max-w-sm mb-5">
-                  El candidato ha recibido el token. Debe completar CUIT, referencias y método de cobro.
+                  Debe completar CUIT, referencias y método de cobro.
                 </p>
-                <div className="flex items-center justify-center flex-wrap gap-2 max-w-md">
+                <div className="flex flex-wrap gap-2 justify-center">
                   <Button variant="secondary" size="sm" onClick={handleCopyLink} className="min-h-[44px] px-4">
-                    <Copy className="w-4 h-4 flex-shrink-0" />
-                    <span>Copiar enlace de formulario</span>
+                    <Copy className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                    Copiar enlace
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => window.open(`#candidate=${candidateToken}`, '_blank')} className="min-h-[44px] px-4">
-                    <ExternalLink className="w-4 h-4 flex-shrink-0" />
-                    <span>Abrir formulario de candidato</span>
+                  <Button
+                    variant="ghost" size="sm"
+                    onClick={() => window.open(`#candidate=${candidateToken}`, '_blank')}
+                    className="min-h-[44px] px-4"
+                  >
+                    <ExternalLink className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                    Abrir formulario
                   </Button>
                 </div>
               </div>
             )}
 
-            {/* ── State 3: Submitted and Consolidated checks ── */}
+            {/* State 3: submitted — show all declared data */}
             {candidateSubmitted && (
-              <div className="space-y-6">
-                {/* Checklist & Fast verification */}
-                <div className="px-4 py-3 bg-[var(--bg-surface)] rounded-lg border border-[var(--border-subtle)]">
-                  <p className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider mb-2.5">
-                    Lista de Control Operativo
+              <div className="space-y-5">
+
+                {/* Verification checklist */}
+                <div className="px-4 py-3 bg-[var(--bg-subtle)] rounded-xl border border-[var(--border-subtle)]">
+                  <p className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider mb-3">
+                    Lista de verificación
                   </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
-                    <CheckItem label="Identificador Fiscal" done={fiscalStepDone} />
-                    <CheckItem label="Método de Cobro" done={paymentStepDone} />
-                    <CheckItem label="Referencias Registradas" done={referencesStepDone} />
-                    <CheckItem label="Documento W-8" done={w8StepDone} />
-                    <CheckItem label="Código QR" done={qrStepDone} />
-                    <CheckItem label="Auditoría Verificada" done={candidateSubmitted && candidateConsolidated} />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                    <CheckItem label="Identificador fiscal"      done={fiscalStepDone} />
+                    <CheckItem label="Método de cobro"           done={isPaymentComplete} />
+                    <CheckItem label="Referencias laborales"     done={referencesStepDone} />
+                    <CheckItem label="Documento W-8"             done={w8StepDone} />
+                    <CheckItem label="Código QR"                 done={qrStepDone} />
+                    <CheckItem label="Consolidación completada"  done={candidateConsolidated} />
                   </div>
                 </div>
 
-                {/* Declared values */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 border-t border-[var(--border-subtle)] pt-5">
-                  <div>
-                    <p className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider mb-3">
-                      Identificación Fiscal
-                    </p>
-                    <div className="space-y-2 bg-[var(--bg-surface)] p-3 rounded-lg border border-[var(--border-subtle)]">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-[var(--text-secondary)]">Tipo declarado:</span>
-                        <span className="font-medium text-[var(--text-primary)]">{taxIdType?.label || candidateData?.taxIdType || 'Ninguno'}</span>
+                {/* Fiscal + Payment side by side */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                  {/* Fiscal declared */}
+                  <div className="bg-[var(--bg-subtle)] rounded-xl border border-[var(--border-subtle)] p-3.5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span
+                        className="flex items-center justify-center w-5 h-5 rounded-md flex-shrink-0"
+                        style={{ backgroundColor: C.fiscal + '20' }}
+                        aria-hidden="true"
+                      >
+                        <Landmark className="w-3 h-3" style={{ color: C.fiscal }} />
+                      </span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: C.fiscal }}>
+                        Fiscal
+                      </span>
+                    </div>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between items-center gap-2">
+                        <span className="text-[var(--text-secondary)]">Tipo</span>
+                        <span className="font-medium text-[var(--text-primary)] text-right">
+                          {taxIdType?.label || candidateData?.taxIdType || 'Ninguno'}
+                        </span>
                       </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-[var(--text-secondary)]">Valor declarado:</span>
-                        <span className="font-mono font-semibold text-[var(--brand-primary)] select-all">{candidateData?.taxIdValue || '—'}</span>
+                      <div className="flex justify-between items-center gap-2">
+                        <span className="text-[var(--text-secondary)]">Valor</span>
+                        <span className="font-mono font-semibold text-[var(--brand-primary)] select-all">
+                          {candidateData?.taxIdValue || '—'}
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider">
-                        Método de Cobro
-                      </p>
-                      <PaymentBadge method={candidateData?.paymentMethod || null} />
-                    </div>
-                    <div className="space-y-2 bg-[var(--bg-surface)] p-3 rounded-lg border border-[var(--border-subtle)]">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-[var(--text-secondary)]">Método seleccionado:</span>
-                        <span className="font-medium text-[var(--text-primary)]">
-                          {candidateData?.paymentMethod === 'CBU' ? 'CBU (Argentina)' :
-                           candidateData?.paymentMethod === 'WIRE' ? 'Transferencia Bancaria' :
-                           candidateData?.paymentMethod === 'CRYPTO' ? 'Liquidación Crypto' : '—'}
+                  {/* Payment declared */}
+                  <div className="bg-[var(--bg-subtle)] rounded-xl border border-[var(--border-subtle)] p-3.5">
+                    <div className="flex items-center justify-between mb-3 gap-2">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="flex items-center justify-center w-5 h-5 rounded-md flex-shrink-0"
+                          style={{ backgroundColor: C.payment + '20' }}
+                          aria-hidden="true"
+                        >
+                          <CreditCard className="w-3 h-3" style={{ color: C.payment }} />
+                        </span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: C.payment }}>
+                          Cobro
                         </span>
                       </div>
+                      <PaymentBadge method={candidateData?.paymentMethod || null} />
+                    </div>
+                    <div className="space-y-1.5 text-xs">
                       {candidateData?.paymentMethod === 'CBU' && (
-                        <div className="flex justify-between text-xs">
-                          <span className="text-[var(--text-secondary)]">CBU:</span>
-                          <span className="font-mono font-semibold text-[var(--brand-primary)] select-all">{candidateData.cbu || '—'}</span>
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="text-[var(--text-secondary)] flex-shrink-0">CBU</span>
+                          <span className="font-mono font-semibold text-[var(--brand-primary)] select-all truncate">
+                            {candidateData.cbu || '—'}
+                          </span>
                         </div>
                       )}
                       {candidateData?.paymentMethod === 'WIRE' && (
-                        <div className="text-xs space-y-1">
-                          <div className="flex justify-between"><span className="text-[var(--text-secondary)]">Banco:</span><span className="text-[var(--text-primary)] truncate max-w-[120px]">{candidateData.bankName}</span></div>
-                          <div className="flex justify-between"><span className="text-[var(--text-secondary)]">Cuenta:</span><span className="font-mono">{candidateData.accountNumber}</span></div>
-                          <div className="flex justify-between"><span className="text-[var(--text-secondary)]">SWIFT:</span><span className="font-mono">{candidateData.swift}</span></div>
-                        </div>
+                        <>
+                          <div className="flex justify-between gap-2">
+                            <span className="text-[var(--text-secondary)] flex-shrink-0">Banco</span>
+                            <span className="text-[var(--text-primary)] truncate text-right">{candidateData.bankName}</span>
+                          </div>
+                          <div className="flex justify-between gap-2">
+                            <span className="text-[var(--text-secondary)] flex-shrink-0">Cuenta</span>
+                            <span className="font-mono truncate">{candidateData.accountNumber}</span>
+                          </div>
+                          <div className="flex justify-between gap-2">
+                            <span className="text-[var(--text-secondary)] flex-shrink-0">SWIFT</span>
+                            <span className="font-mono">{candidateData.swift}</span>
+                          </div>
+                        </>
                       )}
                       {candidateData?.paymentMethod === 'CRYPTO' && (
-                        <div className="text-xs space-y-1">
-                          <div className="flex justify-between"><span className="text-[var(--text-secondary)]">Wallet:</span><span className="text-[var(--text-primary)]">{candidateData.walletType}</span></div>
-                          <div className="flex justify-between"><span className="text-[var(--text-secondary)]">Dirección:</span><span className="font-mono truncate max-w-[120px]">{candidateData.walletAddress}</span></div>
-                        </div>
+                        <>
+                          <div className="flex justify-between gap-2">
+                            <span className="text-[var(--text-secondary)] flex-shrink-0">Wallet</span>
+                            <span className="text-[var(--text-primary)]">{candidateData.walletType}</span>
+                          </div>
+                          <div className="flex justify-between gap-2">
+                            <span className="text-[var(--text-secondary)] flex-shrink-0">Dirección</span>
+                            <span className="font-mono truncate">{candidateData.walletAddress}</span>
+                          </div>
+                        </>
+                      )}
+                      {!candidateData?.paymentMethod && (
+                        <span className="text-[var(--text-disabled)] italic text-xs">No declarado</span>
                       )}
                     </div>
                   </div>
                 </div>
 
-                {/* References & Files Lists */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 border-t border-[var(--border-subtle)] pt-5">
+                {/* References + Documentation */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                  {/* References */}
                   <div>
-                    <p className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider mb-3">
-                      Referencias Laborales ({candidateData?.references?.length || 0})
+                    <p className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider mb-2.5">
+                      Referencias ({candidateData?.references?.length || 0})
                     </p>
                     {candidateData?.references && candidateData.references.length > 0 ? (
                       <div className="space-y-2">
-                        {candidateData.references.map((ref) => (
-                          <div key={ref.id} className="bg-[var(--bg-surface)] p-2.5 rounded-lg border border-[var(--border-subtle)] text-xs">
-                            <div className="flex justify-between font-medium text-[var(--text-primary)]">
-                              <span>{ref.fullName}</span>
-                              <span className="text-[var(--text-tertiary)]">{ref.relationship}</span>
+                        {candidateData.references.map(ref => (
+                          <div
+                            key={ref.id}
+                            className="bg-[var(--bg-subtle)] p-2.5 rounded-lg border border-[var(--border-subtle)] text-xs"
+                          >
+                            <div className="flex justify-between items-baseline gap-2 font-medium text-[var(--text-primary)]">
+                              <span className="truncate">{ref.fullName}</span>
+                              <span className="text-[var(--text-tertiary)] text-[10px] flex-shrink-0">{ref.relationship}</span>
                             </div>
-                            <div className="flex justify-between text-[var(--text-secondary)] mt-1">
-                              <span>{ref.company}</span>
-                              <span>{ref.phone || ref.email}</span>
+                            <div className="flex justify-between text-[var(--text-secondary)] mt-1 gap-2">
+                              <span className="truncate">{ref.company}</span>
+                              <span className="flex-shrink-0">{ref.phone || ref.email}</span>
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-xs text-[var(--text-tertiary)] italic font-light">Sin referencias declaradas.</p>
+                      <p className="text-xs text-[var(--text-tertiary)] italic">Sin referencias declaradas.</p>
                     )}
                   </div>
 
+                  {/* Documentation / files */}
                   <div>
-                    <p className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider mb-3">
-                                            Documentación
+                    <p className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider mb-2.5">
+                      Documentación
                     </p>
                     {(!candidateData?.needsW8 && !candidateData?.hasQrBinance) ? (
-                      <p className="text-xs text-[var(--text-tertiary)] italic font-light">No se requieren archivos adicionales para este caso.</p>
+                      <p className="text-xs text-[var(--text-tertiary)] italic">
+                        No se requieren archivos para este caso.
+                      </p>
                     ) : (candidateData?.files && candidateData.files.length > 0) ? (
                       <div className="space-y-2">
-                        {candidateData.files.map((file) => (
-                          <div key={file.id} className="bg-[var(--bg-surface)] p-2.5 rounded-lg border border-[var(--border-subtle)] text-xs flex flex-col gap-2">
-                            <div className="flex items-center justify-between">
-                              <div className="truncate max-w-[160px]">
+                        {candidateData.files.map(file => (
+                          <div
+                            key={file.id}
+                            className="bg-[var(--bg-subtle)] p-2.5 rounded-lg border border-[var(--border-subtle)] text-xs"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
                                 <p className="font-medium text-[var(--text-primary)] truncate">{file.name}</p>
-                                <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5 font-mono uppercase">{file.fileType} • {Math.round(file.sizeBytes / 1024)} KB</p>
+                                <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5 font-mono uppercase">
+                                  {file.fileType} · {Math.round(file.sizeBytes / 1024)} KB
+                                </p>
                               </div>
-                              <span className="text-[10px] text-[var(--status-success)] font-medium px-1.5 py-0.5 rounded bg-[var(--status-success-subtle)]">
+                              <span className="text-[10px] text-[var(--status-success)] font-medium px-1.5 py-0.5 rounded bg-[var(--status-success-subtle)] flex-shrink-0">
                                 Subido
                               </span>
                             </div>
-                            <div className="flex items-center gap-2 border-t border-[var(--border-subtle)] pt-2">
-                              <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(file.name); useStore.getState().addToast({ type: 'success', title: 'Copiado al portapapeles' }); }}
-                                className="text-[10px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1 uppercase tracking-wider"
-                              >
-                                <Copy className="w-3 h-3" /> Copiar nombre
-                              </button>
-                            </div>
+                            <button
+                              type="button"
+                              onClick={e => {
+                                e.stopPropagation();
+                                navigator.clipboard.writeText(file.name);
+                                useStore.getState().addToast({ type: 'success', title: 'Copiado al portapapeles' });
+                              }}
+                              className="mt-2 pt-2 w-full border-t border-[var(--border-subtle)] text-[10px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1 uppercase tracking-wider focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--brand-primary-glow)] rounded"
+                              aria-label={`Copiar nombre de ${file.name}`}
+                            >
+                              <Copy className="w-3 h-3" aria-hidden="true" />
+                              Copiar nombre
+                            </button>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-xs text-[var(--status-warning)] italic font-medium">Archivos pendientes</p>
+                      <p className="text-xs text-[var(--status-warning)] font-medium">Archivos pendientes</p>
                     )}
                   </div>
                 </div>
 
-                                {/* Consolidation CTA Area */}
-                <div className="border-t border-[var(--border-subtle)] pt-6">
+                {/* Consolidation CTA */}
+                <div className="pt-2 border-t border-[var(--border-subtle)]">
                   {!candidateConsolidated ? (
-                    <div className="p-4 bg-[var(--brand-primary-subtle)] border border-[var(--brand-primary)]/20 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="p-4 bg-[var(--brand-primary-subtle)] border border-[var(--brand-primary)]/20 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div>
                         <p className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-1.5">
-                          <Shield className="w-4 h-4 text-[var(--brand-primary)]" />
+                          <Shield className="w-4 h-4 text-[var(--brand-primary)]" aria-hidden="true" />
                           Consolidar datos del candidato
                         </p>
                         <p className="text-xs text-[var(--text-secondary)] mt-1 max-w-md leading-relaxed">
-                          Esta acción copia los datos fiscales y de cobro al perfil operativo del empleado.
+                          Copia los datos fiscales y de cobro al perfil operativo del empleado.
                         </p>
                       </div>
-                      <Button onClick={handleConsolidate} className="w-full sm:w-auto min-h-[44px] flex-shrink-0 px-5">
-                        Consolidar datos del candidato
+                      <Button
+                        onClick={() => consolidateCandidateData(selectedCase.id)}
+                        className="w-full sm:w-auto min-h-[44px] flex-shrink-0 px-5"
+                      >
+                        Consolidar datos
                       </Button>
                     </div>
                   ) : (
-                    <div className="p-4 bg-[var(--status-success-subtle)] border border-[var(--status-success)]/20 rounded-lg flex items-center gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-[var(--status-success)] flex-shrink-0" />
+                    <div className="p-4 bg-[var(--status-success-subtle)] border border-[var(--status-success)]/20 rounded-xl flex items-center gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-[var(--status-success)] flex-shrink-0" aria-hidden="true" />
                       <div>
-                        <p className="text-sm font-bold text-[var(--status-success)]">
-                          Datos consolidados
-                        </p>
-                        <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                          CUIT • CBU / datos de cobro
-                        </p>
+                        <p className="text-sm font-bold text-[var(--status-success)]">Datos consolidados</p>
+                        <p className="text-xs text-[var(--text-secondary)] mt-0.5">CUIT · CBU / datos de cobro</p>
                       </div>
                     </div>
                   )}
@@ -851,9 +949,9 @@ export function DataTab() {
           </div>
         </div>
 
-        {/* Sticky Right Column (ProfileSummaryPanel) */}
-        <div className="w-full lg:w-80 flex-shrink-0 lg:sticky lg:top-4 space-y-4">
-          <ProfileSummaryPanel
+        {/* Secondary column: sticky validation module */}
+        <div className="w-full lg:w-[280px] flex-shrink-0 lg:sticky lg:top-4 space-y-4">
+          <ValidationModule
             selectedCase={selectedCase}
             isPaymentComplete={isPaymentComplete}
             fiscalStepDone={fiscalStepDone}

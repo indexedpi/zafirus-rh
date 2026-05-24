@@ -1,116 +1,200 @@
 import React, { useState } from 'react';
 import { useStore } from '../../../store';
 import { Button } from '../../ui/Button';
-import { RotateCcw, SkipForward, CheckCircle2, XCircle, Clock, Loader2, Sparkles, Terminal, ChevronDown, ChevronUp, ShieldAlert } from 'lucide-react';
+import {
+  RotateCcw, SkipForward, CheckCircle2, XCircle, Clock, Loader2,
+  Sparkles, Terminal, ChevronDown, ChevronUp, ShieldAlert
+} from 'lucide-react';
 import { TaskType, OnboardingTask } from '../../../types';
 import { cn } from '../../../utils/cn';
 
+// ─── STATIC DATA ──────────────────────────────────────────────────────────────
+
+const INTEGRATION_ADAPTERS: { action: string; adapter: string; category: string }[] = [
+  { action: 'Crear usuario',     adapter: 'Admin SDK · users.insert',        category: 'Google Workspace' },
+  { action: 'Agregar a grupos',  adapter: 'Admin SDK · members.insert',       category: 'Google Workspace' },
+  { action: 'Configurar firma',  adapter: 'Gmail Settings adapter',            category: 'Google Workspace' },
+  { action: 'Enviar bienvenida', adapter: 'Gmail API / SMTP',                  category: 'Comunicaciones'  },
+  { action: 'Solicitar equipo',  adapter: 'Notificación interna',              category: 'Administración'  },
+];
+
 const TASK_SPANISH_LABELS: Record<string, string> = {
-  CREATE_GOOGLE_USER: 'Crear usuario de Google Workspace',
-  ADD_GOOGLE_GROUPS: 'Agregar a grupos internos',
-  CONFIGURE_GMAIL_SIGNATURE: 'Configurar firma de Gmail',
-  SEND_WELCOME_EMAIL: 'Enviar email de bienvenida',
-  ANNOUNCE_IN_GROUPS: 'Anunciar en grupos internos',
+  CREATE_GOOGLE_USER:         'Crear usuario de Google Workspace',
+  ADD_GOOGLE_GROUPS:          'Agregar a grupos internos',
+  CONFIGURE_GMAIL_SIGNATURE:  'Configurar firma de Gmail',
+  SEND_WELCOME_EMAIL:         'Enviar email de bienvenida',
+  ANNOUNCE_IN_GROUPS:         'Anunciar en grupos internos',
   POST_INTERNAL_ANNOUNCEMENT: 'Publicar anuncio interno',
-  REQUEST_DEVICE: 'Solicitar equipo',
-  NOTIFY_ADMINISTRATION: 'Notificar a Administración'
+  REQUEST_DEVICE:             'Solicitar equipo',
+  NOTIFY_ADMINISTRATION:      'Notificar a Administración',
 };
 
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+
 function getTaskLabel(type: TaskType, metadata?: Record<string, unknown>): string {
-  const baseLabel = TASK_SPANISH_LABELS[type] || type;
   if (type === 'ANNOUNCE_IN_GROUPS' && metadata?.groupName) {
     return `Anunciar en ${metadata.groupName}`;
   }
-  return baseLabel;
+  return TASK_SPANISH_LABELS[type] || type;
 }
 
 function getStatusLabel(status: string): string {
   switch (status) {
-    case 'pending': return 'Pendiente';
-    case 'running': return 'En curso';
-    case 'success': return 'Completada';
-    case 'failed': return 'Fallida';
-    case 'skipped': return 'Omitida';
+    case 'pending':         return 'Pendiente';
+    case 'running':         return 'En curso';
+    case 'success':         return 'Completada';
+    case 'failed':          return 'Fallida';
+    case 'skipped':         return 'Omitida';
     case 'manual_required': return 'Requiere intervención';
-    default: return status;
+    default:                return status;
   }
 }
 
-function getTaskIcon(taskStatus: string) {
-  switch (taskStatus) {
-    case 'success': return <CheckCircle2 className="w-4 h-4 text-[var(--status-success)]" />;
-    case 'failed': return <XCircle className="w-4 h-4 text-[var(--status-error)]" />;
-    case 'manual_required': return <ShieldAlert className="w-4 h-4 text-[var(--status-warning)]" />;
-    case 'running': return <Loader2 className="w-4 h-4 text-[var(--status-info)] animate-spin" />;
-    case 'skipped': return <SkipForward className="w-4 h-4 text-[var(--text-tertiary)]" />;
-    default: return <Clock className="w-4 h-4 text-[var(--text-tertiary)]" />;
+function getTaskIcon(status: string) {
+  switch (status) {
+    case 'success':         return <CheckCircle2 className="w-4 h-4 text-[var(--status-success)]" />;
+    case 'failed':          return <XCircle      className="w-4 h-4 text-[var(--status-error)]" />;
+    case 'manual_required': return <ShieldAlert  className="w-4 h-4 text-[var(--status-warning)]" />;
+    case 'running':         return <Loader2      className="w-4 h-4 text-[var(--status-info)] animate-spin" />;
+    case 'skipped':         return <SkipForward  className="w-4 h-4 text-[var(--text-tertiary)]" />;
+    default:                return <Clock        className="w-4 h-4 text-[var(--text-tertiary)]" />;
   }
 }
 
-// ─── LOCAL SUBCOMPONENTS ─────────────────────────────────────────────
+function getOwnerLabel(owner: string): string {
+  switch (owner) {
+    case 'system': return 'Automático';
+    case 'it':     return 'IT';
+    case 'admin':  return 'Administración';
+    default:       return owner;
+  }
+}
 
-function AutomationProgressHeader({ tasks }: { tasks: OnboardingTask[] }) {
-  const total = tasks.length;
-  const completed = tasks.filter(t => t.status === 'success' || t.status === 'skipped').length;
-  const running = tasks.filter(t => t.status === 'running').length;
-  const attention = tasks.filter(t => t.status === 'failed' || t.status === 'manual_required').length;
-  const pending = tasks.filter(t => t.status === 'pending').length;
-  const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+// ─── PROGRESS RING ────────────────────────────────────────────────────────────
+
+function ProgressRing({ percent, isComplete }: { percent: number; isComplete: boolean }) {
+  const r = 18;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (percent / 100) * circ;
+  const color = isComplete ? 'var(--status-success)' : 'var(--brand-primary)';
 
   return (
-    <div className="bg-[var(--bg-surface)] rounded-xl border border-[var(--border-default)] p-5 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-sm font-bold text-[var(--text-primary)]">Activación operativa</h2>
-          <p className="text-xs text-[var(--text-secondary)] mt-1">Seguimiento de tareas automáticas y manuales necesarias para dejar el caso operativo.</p>
-        </div>
-        <div className="text-xl font-bold text-[var(--brand-primary)]">
-          {percent}%
-        </div>
-      </div>
-
-      {/* Progress Bar */}
-      <div className="h-1.5 w-full bg-[var(--bg-elevated)] rounded-full overflow-hidden mb-4 border border-[var(--border-subtle)]">
-        <div
-          className="h-full bg-[var(--brand-primary)] rounded-full transition-[width] duration-300 ease-out"
-          style={{ width: `${percent}%` }}
+    <div className="relative flex-shrink-0" style={{ width: 44, height: 44 }}>
+      <svg width={44} height={44} viewBox="0 0 44 44" aria-hidden="true">
+        <circle cx={22} cy={22} r={r} fill="none" stroke="var(--border-subtle)" strokeWidth={3} />
+        <circle
+          cx={22} cy={22} r={r}
+          fill="none"
+          stroke={color}
+          strokeWidth={3}
+          strokeLinecap="round"
+          strokeDasharray={circ}
+          strokeDashoffset={offset}
+          transform="rotate(-90 22 22)"
+          style={{ transition: 'stroke-dashoffset 300ms ease-out, stroke 300ms ease-out' }}
         />
+      </svg>
+      <span
+        className="absolute inset-0 flex items-center justify-center text-[10px] font-bold tabular-nums"
+        style={{ color }}
+      >
+        {percent}%
+      </span>
+    </div>
+  );
+}
+
+// ─── PROGRESS HEADER ──────────────────────────────────────────────────────────
+
+function AutomationProgressHeader({ tasks }: { tasks: OnboardingTask[] }) {
+  const total     = tasks.length;
+  const completed = tasks.filter(t => t.status === 'success' || t.status === 'skipped').length;
+  const running   = tasks.filter(t => t.status === 'running').length;
+  const attention = tasks.filter(t => t.status === 'failed' || t.status === 'manual_required').length;
+  const pending   = tasks.filter(t => t.status === 'pending').length;
+  const percent   = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const isComplete = percent === 100;
+
+  return (
+    <div className="bg-[var(--bg-surface)] rounded-xl border border-[var(--border-default)] px-4 py-3.5" style={{ boxShadow: 'var(--shadow-sm)' }}>
+      {/* Ring + title + score — single row */}
+      <div className="flex items-center gap-3.5">
+        <ProgressRing percent={percent} isComplete={isComplete} />
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline justify-between gap-2 mb-2">
+            <span className="text-sm font-bold text-[var(--text-primary)] leading-none">
+              Activación operativa
+            </span>
+            <span className="text-[11px] font-semibold tabular-nums text-[var(--text-tertiary)] flex-shrink-0">
+              {completed}/{total}
+            </span>
+          </div>
+
+          {/* Progress rail */}
+          <div
+            className="h-1.5 w-full bg-[var(--bg-subtle)] rounded-full overflow-hidden"
+            role="progressbar"
+            aria-valuenow={percent}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`Progreso de activación: ${percent}% completado`}
+          >
+            <div
+              className="h-full rounded-full"
+              style={{
+                width: `${percent}%`,
+                backgroundColor: isComplete ? 'var(--status-success)' : 'var(--brand-primary)',
+                transition: 'width 300ms ease-out, background-color 300ms ease-out',
+              }}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
-        <div className="flex flex-col min-w-0">
-          <span className="text-[var(--text-tertiary)] truncate">Total de tareas</span>
-          <span className="font-medium text-[var(--text-primary)]">{total}</span>
-        </div>
-        <div className="flex flex-col min-w-0">
-          <span className="text-[var(--text-tertiary)] truncate">Completadas</span>
-          <span className="font-medium text-[var(--status-success)]">{completed}</span>
-        </div>
-        <div className="flex flex-col min-w-0">
-          <span className="text-[var(--text-tertiary)] truncate">En curso</span>
-          <span className="font-medium text-[var(--status-info)]">{running}</span>
-        </div>
-        <div className="flex flex-col min-w-0">
-          <span className="text-[var(--text-tertiary)] truncate">Requieren atención</span>
-          <span className={cn("font-medium", attention > 0 ? "text-[var(--status-error)]" : "text-[var(--text-primary)]")}>{attention}</span>
-        </div>
-        <div className="flex flex-col min-w-0">
-          <span className="text-[var(--text-tertiary)] truncate">Pendientes</span>
-          <span className="font-medium text-[var(--text-primary)]">{pending}</span>
-        </div>
+      {/* Status chips — only render chips that are non-zero or always-relevant */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 pl-[52px]">
+        {running > 0 && (
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--status-info)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--status-info)] flex-shrink-0" aria-hidden="true" />
+            {running} en curso
+          </span>
+        )}
+        {attention > 0 && (
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--status-error)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--status-error)] flex-shrink-0" aria-hidden="true" />
+            {attention} requieren atención
+          </span>
+        )}
+        {pending > 0 && (
+          <span className="inline-flex items-center gap-1 text-[11px] text-[var(--text-tertiary)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-tertiary)] flex-shrink-0" aria-hidden="true" />
+            {pending} pendientes
+          </span>
+        )}
+        {isComplete && (
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--status-success)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--status-success)] flex-shrink-0" aria-hidden="true" />
+            Todo completado
+          </span>
+        )}
+        {!running && !attention && !pending && !isComplete && (
+          <span className="text-[11px] text-[var(--text-tertiary)]">{total} tareas en total</span>
+        )}
       </div>
     </div>
   );
 }
 
-function TaskOutputPanel({ task, selectedCase }: { task: OnboardingTask, selectedCase: any }) {
-  const getOutput = () => {
+// ─── EVIDENCE PANEL ───────────────────────────────────────────────────────────
+
+function TaskOutputPanel({ task, selectedCase }: { task: OnboardingTask; selectedCase: any }) {
+  const getOutput = (): string => {
     switch (task.type) {
       case 'CREATE_GOOGLE_USER':
         if (task.status === 'pending') return 'Preparada para crear la cuenta corporativa.';
-        if (task.status === 'running') return 'Creando usuario en Google Workspace...';
-        if (task.status === 'failed') return 'No se pudo crear el usuario.\nRevisá el error y reintentá la tarea.';
+        if (task.status === 'running') return 'Creando usuario en Google Workspace…';
+        if (task.status === 'failed')  return 'No se pudo crear el usuario.\nRevisá el error y reintentá la tarea.';
         if (task.status === 'success') {
           const email = selectedCase.employee.corporateEmail || selectedCase.suggestedEmail || 'colaborador@zafirus.tech';
           return `Usuario corporativo creado.\nEmail: ${email}`;
@@ -118,7 +202,7 @@ function TaskOutputPanel({ task, selectedCase }: { task: OnboardingTask, selecte
         break;
       case 'ADD_GOOGLE_GROUPS':
         if (task.status === 'success') return 'Grupos asignados correctamente.';
-        if (task.status === 'failed') return 'No se pudo completar la asignación a grupos.';
+        if (task.status === 'failed')  return 'No se pudo completar la asignación a grupos.';
         break;
       case 'CONFIGURE_GMAIL_SIGNATURE':
         if (task.status === 'success') return 'Firma corporativa preparada con datos del colaborador.';
@@ -126,7 +210,7 @@ function TaskOutputPanel({ task, selectedCase }: { task: OnboardingTask, selecte
       case 'SEND_WELCOME_EMAIL':
         if (task.status === 'pending' || task.status === 'running') {
           const approved = selectedCase.emailTemplate?.approvedAt != null;
-          return approved ? 'Plantilla aprobada.' : 'Plantilla pendiente de aprobación.';
+          return approved ? 'Plantilla aprobada. Lista para envío.' : 'Plantilla pendiente de aprobación en la pestaña Email.';
         }
         if (task.status === 'success') return 'Email de bienvenida preparado para envío.';
         break;
@@ -134,128 +218,155 @@ function TaskOutputPanel({ task, selectedCase }: { task: OnboardingTask, selecte
         return 'Solicitud de equipo enviada a Administración.';
       case 'NOTIFY_ADMINISTRATION':
         return 'Administración notificada sobre el alta.';
-      default:
-        break;
     }
-
-    // Default fallback
-    if (task.status === 'pending') return 'Esperando ejecución...';
-    if (task.status === 'running') return 'Ejecutando proceso...';
+    if (task.status === 'pending') return 'Esperando ejecución.';
+    if (task.status === 'running') return 'Ejecutando proceso…';
     if (task.status === 'success') return 'Operación completada.';
-    if (task.status === 'failed') return 'Operación fallida.';
+    if (task.status === 'failed')  return 'Operación fallida.';
     if (task.status === 'skipped') return 'Operación omitida intencionalmente.';
     return 'Sin registro todavía.';
   };
 
   return (
-    <div className="bg-[#0f172a] rounded-md p-3 border border-slate-700 font-mono text-[11px] text-slate-300 leading-relaxed overflow-x-auto mt-3">
-      <div className="flex items-center gap-1.5 mb-2 text-slate-500 uppercase tracking-wider text-[9px] font-bold">
-        <Terminal className="w-3 h-3" /> Vista de ejecución
+    <div className="rounded-lg overflow-hidden border border-[var(--border-subtle)]">
+      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--bg-subtle)] border-b border-[var(--border-subtle)]">
+        <Terminal className="w-3 h-3 text-[var(--text-tertiary)]" aria-hidden="true" />
+        <span className="text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
+          Evidencia operativa
+        </span>
       </div>
-      <div className="whitespace-pre-wrap break-words">{getOutput()}</div>
+      <div className="px-3 py-2.5 bg-[var(--bg-surface)] text-xs text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap break-words font-mono">
+        {getOutput()}
+      </div>
     </div>
   );
 }
 
-function TaskRow({ task, selectedCase }: { task: OnboardingTask, selectedCase: any }) {
+// ─── TASK ROW ─────────────────────────────────────────────────────────────────
+
+function TaskRow({ task, selectedCase }: { task: OnboardingTask; selectedCase: any }) {
   const { retryTask, skipTask } = useStore();
 
-  // Auto-expand if failed or running or manual
-  const [expanded, setExpanded] = useState(task.status === 'failed' || task.status === 'running' || task.status === 'manual_required');
+  const autoExpand = task.status === 'failed' || task.status === 'running' || task.status === 'manual_required';
+  const [expanded, setExpanded] = useState(autoExpand);
 
-  const ownerLabel = task.owner === 'system' ? 'Automático' :
-                     task.owner === 'it' ? 'IT' :
-                     task.owner === 'admin' ? 'Administración' : task.owner;
+  const label      = getTaskLabel(task.type, task.metadata);
+  const ownerLabel = getOwnerLabel(task.owner);
+  const formatTime = (ts: number | null) =>
+    ts ? new Date(ts).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '—';
 
-  const formatDate = (ts: number | null) => ts ? new Date(ts).toLocaleTimeString('es-AR') : '—';
+  const isAlert   = task.status === 'failed' || task.status === 'manual_required';
+  const isSuccess = task.status === 'success';
+  const isSkipped = task.status === 'skipped';
+
+  const statusPillClass = cn(
+    'text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border flex-shrink-0 leading-none',
+    isSuccess
+      ? 'bg-[var(--status-success-subtle)] text-[var(--status-success)] border-[var(--status-success)]/20'
+      : isAlert
+        ? 'bg-[var(--status-error-subtle)] text-[var(--status-error)] border-[var(--status-error)]/20'
+        : task.status === 'running'
+          ? 'bg-[var(--status-info-subtle)] text-[var(--status-info)] border-[var(--status-info)]/20'
+          : 'bg-[var(--bg-base)] text-[var(--text-tertiary)] border-[var(--border-default)]'
+  );
 
   return (
-    <div className="bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-lg overflow-hidden transition-colors">
-      {/* Row Header */}
-      <div
-        role="button"
-        tabIndex={0}
+    <div
+      className={cn(
+        'bg-[var(--bg-surface)] border rounded-xl overflow-hidden',
+        isAlert   ? 'border-[var(--status-error)]/25' : 'border-[var(--border-subtle)]',
+        isSuccess || isSkipped ? 'opacity-90' : ''
+      )}
+      style={{ boxShadow: 'var(--shadow-sm)' }}
+    >
+      {/* Row header — real button for keyboard access */}
+      <button
+        type="button"
         aria-expanded={expanded}
-        aria-label={expanded ? `Ocultar detalle de ${getTaskLabel(task.type, task.metadata)}` : `Ver detalle de ${getTaskLabel(task.type, task.metadata)}`}
+        aria-label={expanded ? `Ocultar detalle de ${label}` : `Ver detalle de ${label}`}
         className={cn(
-          "flex items-start sm:items-center justify-between p-3.5 cursor-pointer hover:bg-[var(--bg-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary-glow)]",
-          task.status === 'failed' && "bg-[var(--status-error-subtle)]/30"
+          'w-full flex items-center justify-between gap-3 px-3.5 py-3 text-left',
+          'hover:bg-[var(--bg-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary-glow)]',
+          'transition-colors duration-150',
+          isAlert && 'bg-[var(--status-error-subtle)]/20'
         )}
-        onClick={() => setExpanded(!expanded)}
-        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(!expanded); } }}
+        onClick={() => setExpanded(prev => !prev)}
       >
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto min-w-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="flex-shrink-0 mt-0.5 sm:mt-0">{getTaskIcon(task.status)}</div>
-            <span className="text-sm font-medium text-[var(--text-primary)] truncate">
-              {getTaskLabel(task.type, task.metadata)}
+        {/* Left: icon + name + owner stacked */}
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <span className="flex-shrink-0 mt-0.5 self-start">{getTaskIcon(task.status)}</span>
+          <div className="min-w-0">
+            <span className="text-sm font-medium text-[var(--text-primary)] block truncate leading-snug">
+              {label}
             </span>
-          </div>
-          <div className="flex items-center gap-2 pl-6 sm:pl-0 flex-wrap">
-            <span className={cn(
-              "text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex-shrink-0",
-              task.status === 'success' ? 'bg-[var(--status-success-subtle)] text-[var(--status-success)] border border-[var(--status-success)]/20' :
-              task.status === 'failed' || task.status === 'manual_required' ? 'bg-[var(--status-error-subtle)] text-[var(--status-error)] border border-[var(--status-error)]/20' :
-              task.status === 'running' ? 'bg-[var(--status-info-subtle)] text-[var(--status-info)] border border-[var(--status-info)]/20' :
-              'bg-[var(--bg-base)] text-[var(--text-secondary)] border border-[var(--border-default)]'
-            )}>
-              {getStatusLabel(task.status)}
-            </span>
-            <span className="text-xs text-[var(--text-tertiary)] flex-shrink-0">
+            <span className="text-[11px] text-[var(--text-tertiary)] block mt-0.5">
               {ownerLabel}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-          {expanded ? <ChevronUp className="w-4 h-4 text-[var(--text-tertiary)]" /> : <ChevronDown className="w-4 h-4 text-[var(--text-tertiary)]" />}
+        {/* Right: status pill + chevron */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className={statusPillClass}>{getStatusLabel(task.status)}</span>
+          {expanded
+            ? <ChevronUp   className="w-3.5 h-3.5 text-[var(--text-tertiary)]" aria-hidden="true" />
+            : <ChevronDown className="w-3.5 h-3.5 text-[var(--text-tertiary)]" aria-hidden="true" />
+          }
         </div>
-      </div>
+      </button>
 
-      {/* Expanded Body */}
+      {/* Expanded body */}
       {expanded && (
-        <div className="p-4 border-t border-[var(--border-subtle)] bg-[var(--bg-base)]">
+        <div className="px-4 pb-4 pt-3 border-t border-[var(--border-subtle)] bg-[var(--bg-base)]">
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-            <div className="flex flex-col gap-1 min-w-0">
-              <span className="text-[var(--text-tertiary)] uppercase tracking-wider text-[10px] font-semibold">Inicio</span>
-              <span className="text-[var(--text-primary)] truncate">{formatDate(task.startedAt)}</span>
-            </div>
-            <div className="flex flex-col gap-1 min-w-0">
-              <span className="text-[var(--text-tertiary)] uppercase tracking-wider text-[10px] font-semibold">Finalización</span>
-              <span className="text-[var(--text-primary)] truncate">{formatDate(task.completedAt)}</span>
-            </div>
-            <div className="flex flex-col gap-1 min-w-0">
-              <span className="text-[var(--text-tertiary)] uppercase tracking-wider text-[10px] font-semibold">Intentos</span>
-              <span className="text-[var(--text-primary)] truncate">{task.attempts}</span>
-            </div>
+          {/* Metadata strip — 3 fields */}
+          <div className="grid grid-cols-3 gap-3 mb-3.5">
+            {[
+              { label: 'Inicio',    value: formatTime(task.startedAt) },
+              { label: 'Fin',       value: formatTime(task.completedAt) },
+              { label: 'Intentos',  value: String(task.attempts) },
+            ].map(field => (
+              <div key={field.label} className="flex flex-col gap-0.5">
+                <span className="text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
+                  {field.label}
+                </span>
+                <span className="text-xs text-[var(--text-primary)] tabular-nums">{field.value}</span>
+              </div>
+            ))}
           </div>
 
+          {/* Error block */}
           {task.lastError && (
-            <div className="mt-4 p-3 rounded bg-[var(--status-error-subtle)] border border-[var(--status-error)]/20 text-xs text-[var(--status-error)] whitespace-pre-wrap break-words">
-              <strong className="font-bold uppercase tracking-wider text-[10px]">Error registrado:</strong><br />
+            <div className="mb-3 p-3 rounded-lg bg-[var(--status-error-subtle)] border border-[var(--status-error)]/20 text-xs text-[var(--status-error)] whitespace-pre-wrap break-words">
+              <strong className="text-[10px] font-bold uppercase tracking-wider block mb-1">
+                Error registrado
+              </strong>
               {task.lastError}
             </div>
           )}
 
+          {/* Evidence panel */}
           <TaskOutputPanel task={task} selectedCase={selectedCase} />
 
-          {/* Action Buttons */}
+          {/* Action buttons */}
           {(task.status === 'failed' || task.status === 'manual_required') && (
-            <div className="flex flex-wrap gap-2 pt-4 mt-4 border-t border-[var(--border-subtle)]">
+            <div className="flex flex-wrap gap-2 pt-3.5 mt-3.5 border-t border-[var(--border-subtle)]">
               {task.status === 'failed' && (
                 <>
                   <Button variant="secondary" size="sm" onClick={() => retryTask(selectedCase.id, task.id)}>
-                    <RotateCcw className="w-3.5 h-3.5" /> Reintentar
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Reintentar
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => skipTask(selectedCase.id, task.id)}>
-                    <SkipForward className="w-3.5 h-3.5" /> Omitir
+                    <SkipForward className="w-3.5 h-3.5" />
+                    Omitir
                   </Button>
                 </>
               )}
               {task.status === 'manual_required' && (
                 <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--status-warning)] bg-[var(--status-warning-subtle)] px-2.5 py-1 rounded border border-[var(--status-warning)]/20">
-                  <ShieldAlert className="w-3.5 h-3.5" /> Requiere intervención manual
+                  <ShieldAlert className="w-3.5 h-3.5" aria-hidden="true" />
+                  Requiere intervención manual
                 </span>
               )}
             </div>
@@ -266,67 +377,128 @@ function TaskRow({ task, selectedCase }: { task: OnboardingTask, selectedCase: a
   );
 }
 
-function TaskGroup({ title, tasks, selectedCase, colorClass }: { title: string, tasks: OnboardingTask[], selectedCase: any, colorClass?: string }) {
+// ─── TASK GROUP ───────────────────────────────────────────────────────────────
+
+interface TaskGroupProps {
+  title: string;
+  tasks: OnboardingTask[];
+  selectedCase: any;
+  dotColor?: string;
+  defaultCollapsed?: boolean;
+}
+
+function TaskGroup({ title, tasks, selectedCase, dotColor, defaultCollapsed = false }: TaskGroupProps) {
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
+
   if (tasks.length === 0) return null;
+
   return (
-    <div className="mb-6 last:mb-0">
-      <h3 className={cn("text-xs font-bold uppercase tracking-wider mb-3", colorClass || "text-[var(--text-tertiary)]")}>
-        {title} ({tasks.length})
-      </h3>
-      <div className="space-y-2">
-        {tasks.map(t => <TaskRow key={t.id} task={t} selectedCase={selectedCase} />)}
-      </div>
+    <div>
+      <button
+        type="button"
+        aria-expanded={!collapsed}
+        aria-label={collapsed ? `Expandir grupo ${title}` : `Colapsar grupo ${title}`}
+        className={cn(
+          'flex items-center gap-2 py-2 w-full text-left',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary-glow)] rounded'
+        )}
+        onClick={() => setCollapsed(prev => !prev)}
+      >
+        {dotColor && (
+          <span
+            className="w-2 h-2 rounded-full flex-shrink-0"
+            style={{ backgroundColor: dotColor }}
+            aria-hidden="true"
+          />
+        )}
+        <span
+          className="text-[11px] font-bold uppercase tracking-wider"
+          style={{ color: dotColor ?? 'var(--text-tertiary)' }}
+        >
+          {title}
+        </span>
+        <span className="text-[10px] font-semibold text-[var(--text-tertiary)] bg-[var(--bg-subtle)] px-1.5 py-0.5 rounded-full border border-[var(--border-subtle)]">
+          {tasks.length}
+        </span>
+        <span className="ml-auto">
+          {collapsed
+            ? <ChevronDown className="w-3.5 h-3.5 text-[var(--text-tertiary)]" aria-hidden="true" />
+            : <ChevronUp   className="w-3.5 h-3.5 text-[var(--text-tertiary)]" aria-hidden="true" />
+          }
+        </span>
+      </button>
+
+      {!collapsed && (
+        <div className="space-y-2 pb-3">
+          {tasks.map(t => (
+            <TaskRow key={t.id} task={t} selectedCase={selectedCase} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
+
+// ─── INTEGRATION HINT ─────────────────────────────────────────────────────────
 
 function AutomationIntegrationHint() {
   return (
-    <div className="mt-8 bg-[var(--bg-elevated)] rounded-xl border border-[var(--border-subtle)] p-5">
-      <h3 className="text-sm font-bold text-[var(--text-primary)] mb-2">Preparado para integración real</h3>
-      <p className="text-xs text-[var(--text-secondary)] mb-4">
-        Estas tareas están modeladas para conectarse luego con Google Workspace, Gmail y procesos internos mediante un backend seguro.
-      </p>
+    <div
+      className="bg-[var(--bg-surface)] rounded-xl border border-[var(--border-subtle)] overflow-hidden"
+      style={{ boxShadow: 'var(--shadow-sm)' }}
+    >
+      {/* Header */}
+      <div className="px-4 py-3.5 border-b border-[var(--border-subtle)]">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-3.5 h-3.5 text-[var(--brand-primary)]" aria-hidden="true" />
+          <h3 className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider">
+            Integración futura
+          </h3>
+        </div>
+        <p className="text-[11px] text-[var(--text-secondary)] mt-1 leading-relaxed">
+          Adapters modelados para conectar con Google Workspace y procesos internos.
+        </p>
+      </div>
 
-      <div className="space-y-2 text-xs font-mono text-[var(--text-secondary)] bg-[var(--bg-base)] p-3 rounded border border-[var(--border-default)]">
-        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 border-b border-[var(--border-subtle)] pb-2">
-          <span className="font-semibold text-[var(--text-primary)]">Crear usuario</span>
-          <span className="text-[var(--text-tertiary)] break-words text-left sm:text-right">Admin SDK Directory: users.insert</span>
-        </div>
-        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 border-b border-[var(--border-subtle)] pb-2 pt-1">
-          <span className="font-semibold text-[var(--text-primary)]">Agregar a grupos</span>
-          <span className="text-[var(--text-tertiary)] break-words text-left sm:text-right">Admin SDK Directory: members.insert</span>
-        </div>
-        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 border-b border-[var(--border-subtle)] pb-2 pt-1">
-          <span className="font-semibold text-[var(--text-primary)]">Configurar firma</span>
-          <span className="text-[var(--text-tertiary)] break-words text-left sm:text-right">Gmail / Workspace settings adapter</span>
-        </div>
-        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 border-b border-[var(--border-subtle)] pb-2 pt-1">
-          <span className="font-semibold text-[var(--text-primary)]">Enviar bienvenida</span>
-          <span className="text-[var(--text-tertiary)] break-words text-left sm:text-right">Gmail API / SMTP service</span>
-        </div>
-        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 pt-1">
-          <span className="font-semibold text-[var(--text-primary)]">Solicitar equipo</span>
-          <span className="text-[var(--text-tertiary)] break-words text-left sm:text-right">Integración interna o notificación a Administración</span>
-        </div>
+      {/* Adapter list */}
+      <div className="divide-y divide-[var(--border-subtle)]">
+        {INTEGRATION_ADAPTERS.map(item => (
+          <div key={item.action} className="px-4 py-3 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <span className="text-xs font-medium text-[var(--text-primary)] block leading-snug">
+                {item.action}
+              </span>
+              <span className="text-[10px] font-mono text-[var(--text-tertiary)] mt-0.5 block break-all">
+                {item.adapter}
+              </span>
+            </div>
+            <span className="text-[10px] font-medium text-[var(--text-tertiary)] bg-[var(--bg-subtle)] border border-[var(--border-subtle)] px-1.5 py-0.5 rounded whitespace-nowrap flex-shrink-0 self-start">
+              {item.category}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
+// ─── EMPTY STATE ──────────────────────────────────────────────────────────────
+
 function EmptyAutomationState() {
   return (
-    <div className="flex flex-col items-center justify-center h-full text-center py-12 px-6 bg-[var(--bg-elevated)] rounded-xl border border-[var(--border-default)]">
-      <Clock className="w-10 h-10 text-[var(--text-tertiary)] mb-3" />
-      <p className="text-sm font-bold text-[var(--text-primary)]">Todavía no hay tareas de activación</p>
-      <p className="text-xs text-[var(--text-secondary)] mt-1 max-w-sm">
+    <div className="flex flex-col items-center justify-center min-h-[240px] text-center py-12 px-6">
+      <Clock className="w-10 h-10 text-[var(--text-tertiary)] mb-3" aria-hidden="true" />
+      <p className="text-sm font-bold text-[var(--text-primary)]">
+        Todavía no hay tareas de activación
+      </p>
+      <p className="text-xs text-[var(--text-secondary)] mt-1 max-w-xs">
         Las tareas se generan cuando el caso avanza hacia la activación operativa.
       </p>
     </div>
   );
 }
 
-// ─── MAIN COMPONENT ──────────────────────────────────────────────────
+// ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
 export function TasksTab() {
   const selectedCase = useStore(state => state.getSelectedCase());
@@ -339,32 +511,68 @@ export function TasksTab() {
     return <EmptyAutomationState />;
   }
 
-  const runningTasks = tasks.filter(t => t.status === 'running');
+  const runningTasks   = tasks.filter(t => t.status === 'running');
   const attentionTasks = tasks.filter(t => t.status === 'failed' || t.status === 'manual_required');
-  const pendingTasks = tasks.filter(t => t.status === 'pending');
-  const successTasks = tasks.filter(t => t.status === 'success');
-  const skippedTasks = tasks.filter(t => t.status === 'skipped');
+  const pendingTasks   = tasks.filter(t => t.status === 'pending');
+  const successTasks   = tasks.filter(t => t.status === 'success');
+  const skippedTasks   = tasks.filter(t => t.status === 'skipped');
+
+  const hasActiveWork = runningTasks.length > 0 || attentionTasks.length > 0 || pendingTasks.length > 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 pb-6">
+      {/* Compact progress summary */}
       <AutomationProgressHeader tasks={tasks} />
 
-      {status === 'operative' && attentionTasks.length === 0 && runningTasks.length === 0 && pendingTasks.length === 0 && (
-        <div className="bg-[var(--status-success-subtle)] border border-[var(--status-success)]/30 rounded-xl p-4 text-center">
-          <Sparkles className="w-6 h-6 text-[var(--status-success)] mx-auto mb-2" />
-          <p className="text-sm font-bold text-[var(--status-success)]">Onboarding completado</p>
-          <p className="text-xs text-[var(--text-secondary)] mt-0.5">Todas las tareas se ejecutaron correctamente o fueron omitidas de forma segura.</p>
+      {/* Operative completion state */}
+      {status === 'operative' && !hasActiveWork && (
+        <div className="flex items-center gap-3 bg-[var(--status-success-subtle)] border border-[var(--status-success)]/25 rounded-xl px-4 py-3.5">
+          <Sparkles className="w-5 h-5 text-[var(--status-success)] flex-shrink-0" aria-hidden="true" />
+          <div>
+            <p className="text-sm font-bold text-[var(--status-success)] leading-snug">
+              Onboarding completado
+            </p>
+            <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+              Todas las tareas se ejecutaron o fueron omitidas de forma segura.
+            </p>
+          </div>
         </div>
       )}
 
+      {/* Task groups — priority order: running > attention > pending > completed > skipped */}
       <div>
-        <TaskGroup title="En curso" tasks={runningTasks} selectedCase={selectedCase} colorClass="text-[var(--status-info)]" />
-        <TaskGroup title="Requieren atención" tasks={attentionTasks} selectedCase={selectedCase} colorClass="text-[var(--status-error)]" />
-        <TaskGroup title="Pendientes" tasks={pendingTasks} selectedCase={selectedCase} />
-        <TaskGroup title="Completadas" tasks={successTasks} selectedCase={selectedCase} />
-        <TaskGroup title="Omitidas" tasks={skippedTasks} selectedCase={selectedCase} />
+        <TaskGroup
+          title="En curso"
+          tasks={runningTasks}
+          selectedCase={selectedCase}
+          dotColor="var(--status-info)"
+        />
+        <TaskGroup
+          title="Requieren atención"
+          tasks={attentionTasks}
+          selectedCase={selectedCase}
+          dotColor="var(--status-error)"
+        />
+        <TaskGroup
+          title="Pendientes"
+          tasks={pendingTasks}
+          selectedCase={selectedCase}
+        />
+        <TaskGroup
+          title="Completadas"
+          tasks={successTasks}
+          selectedCase={selectedCase}
+          dotColor="var(--status-success)"
+          defaultCollapsed={hasActiveWork}
+        />
+        <TaskGroup
+          title="Omitidas"
+          tasks={skippedTasks}
+          selectedCase={selectedCase}
+        />
       </div>
 
+      {/* Integration readiness — secondary, below task list */}
       <AutomationIntegrationHint />
     </div>
   );

@@ -1,44 +1,48 @@
 # Zafirus Onboarding System
 
-> Plataforma interna de Zafirus Technologies para automatizar el proceso de onboarding de colaboradores.
+Plataforma interna de Zafirus Technologies para automatizar el proceso de onboarding de colaboradores.
 
-## 🏗️ Stack Tecnológico
+## Stack
 
-- React 19
-- Vite
-- TypeScript
+- React 19 + TypeScript
+- Vite 7 + vite-plugin-singlefile
 - Tailwind CSS v4
 - Zustand
 - Lucide React
+- Supabase (optional — realtime persistence)
 
-## 🚀 How to run & build
+## Setup
 
 ```bash
-# Instalar dependencias
 npm install
-
-# Correr en desarrollo
-npm run dev
-
-# Compilar para producción (single-file HTML)
-npm run build
+npm run dev       # development server
+npm run build     # production build (single-file HTML)
 ```
 
-## 🧪 Demo Mode
+## Demo mode
 
-To access presentation tools and bypass gated mock screens, append `#demo` to the URL:
-`http://localhost:5173/#demo`
+Append `#demo` to the URL to unlock the split-screen, Auto Demo runner, and Reset controls.
+See [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) for the full walkthrough including Supabase local setup and candidate token routing.
 
-This exposes the **Auto Demo** runner and data reset controls in the TopBar.
+## Protected files
 
-## 🔒 Protected Files
-`src/store.ts` and `src/types.ts` are immutable state and product contracts.
+`src/store.ts` and `src/types.ts` are immutable state and product contracts — do not modify.
 
+## Documentation
 
-## 📚 Docs & Presentation
-- [Guía de Presentación (DEMO_SCRIPT.md)](DEMO_SCRIPT.md)
-- [QA Checklist (QA_CHECKLIST.md)](QA_CHECKLIST.md)
+| File | Contents |
+|---|---|
+| [DESIGN.md](DESIGN.md) | Visual constitution — color tokens, typography, motion, accessibility rules |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Workflow, conventions, merge request process |
+| [docs/PHASE_PLAN.md](docs/PHASE_PLAN.md) | Phase history (7A–7H complete) and Phase 8 scope |
+| [docs/PRODUCT.md](docs/PRODUCT.md) | Product purpose, users, design principles |
+| [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) | End-to-end demo walkthrough |
+| [docs/QA_CHECKLIST.md](docs/QA_CHECKLIST.md) | QA checklist per phase |
+| [docs/UI_AUDIT.md](docs/UI_AUDIT.md) | Known issues and audit findings per phase |
+| [docs/GOOGLE_WORKSPACE_INTEGRATION_PLAN.md](docs/GOOGLE_WORKSPACE_INTEGRATION_PLAN.md) | Phase 8 backend integration plan |
+| [docs/specs/](docs/specs/) | Phase 2 architecture specs (NestJS backend, future) |
+| [docs/guides/](docs/guides/) | Development setup and GitLab workflow guides |
 
-## 📌 Current Status
+## Status
 
-Phase 6 (Final QA) Complete. Ready for targeted operational use.
+Phase 7H complete. Phase 8 (Google Workspace Integration) is next.

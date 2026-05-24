@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, createContext, useContext, useMemo } from 'react';
 import { useStore } from '../../store';
 import { OverviewTab } from './tabs/OverviewTab';
 import { DataTab } from './tabs/DataTab';
@@ -8,6 +8,16 @@ import { AuditTab } from './tabs/AuditTab';
 import { CaseActions } from './CaseActions';
 import { cn } from '../../utils/cn';
 import { FileText, Mail, CheckSquare, Clock, Database, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react';
+
+export interface CaseNavigationValue {
+  navigateTo: (tabId: string) => void;
+}
+
+export const CaseNavigationContext = createContext<CaseNavigationValue | null>(null);
+
+export function useCaseNavigation() {
+  return useContext(CaseNavigationContext);
+}
 
 interface CaseDetailProps {
   showCandidatePanel?: boolean;
@@ -48,8 +58,10 @@ export function CaseDetail({ showCandidatePanel, onShowCandidatePanel, sidebarOp
   const runningTasks = selectedCase.tasks.filter(t => t.status === 'running').length;
   const failedTasks = selectedCase.tasks.filter(t => t.status === 'failed').length;
 
+  const navValue = useMemo(() => ({ navigateTo: setActiveTab }), [setActiveTab]);
+
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-[var(--bg-base)]">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[var(--bg-base)]">
 
       {/* Tab strip — back button left, tabs center-left, candidato switch right */}
       <div className="flex items-center gap-1 px-2 lg:px-4 py-2 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] flex-shrink-0">
@@ -122,21 +134,25 @@ export function CaseDetail({ showCandidatePanel, onShowCandidatePanel, sidebarOp
       </div>
 
       {/* Tab Content */}
-      <div
-        role="tabpanel"
-        id={`tabpanel-${activeTab}`}
-        aria-labelledby={activeTab}
-        className="flex-1 overflow-y-auto px-4 lg:px-6 py-4"
-      >
-        {activeTab === 'overview' && <OverviewTab onOpenAudit={() => setActiveTab('audit')} />}
-        {activeTab === 'data' && <DataTab />}
-        {activeTab === 'email' && <EmailTab />}
-        {activeTab === 'tasks' && <TasksTab />}
-        {activeTab === 'audit' && <AuditTab />}
-      </div>
+      <CaseNavigationContext.Provider value={navValue}>
+        <div
+          role="tabpanel"
+          id={`tabpanel-${activeTab}`}
+          aria-labelledby={activeTab}
+          className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-12 pt-4 lg:px-6 lg:pb-16 relative"
+        >
+          {activeTab === 'overview' && <OverviewTab onOpenAudit={() => setActiveTab('audit')} />}
+          {activeTab === 'data' && <DataTab />}
+          {activeTab === 'email' && <EmailTab />}
+          {activeTab === 'tasks' && <TasksTab />}
+          {activeTab === 'audit' && <AuditTab />}
+        </div>
+      </CaseNavigationContext.Provider>
 
       {/* Actions */}
-      <CaseActions />
+      <div className="shrink-0">
+        <CaseActions />
+      </div>
     </div>
   );
 }
