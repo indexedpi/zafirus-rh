@@ -63,9 +63,17 @@
   --shadow-focus: 0 0 0 3px var(--brand-primary-glow);
 
   /* Section Accents */
-  --section-personal: #459CDB;
-  --section-location: #27AE60;
-  --section-work:     #9B51E0;
+  --section-identity: #459CDB;
+  --section-identity-subtle: rgba(69,156,219,0.08);
+  --section-location: #16a34a;
+  --section-location-subtle: rgba(22,163,74,0.08);
+  --section-position: #7c3aed;
+  --section-position-subtle: rgba(124,58,237,0.08);
+  --section-agenda: #6b7280;
+  --section-agenda-subtle: rgba(107,114,128,0.08);
+
+  --section-personal: var(--section-identity);
+  --section-work:     var(--section-position);
   --section-fiscal:   #F2994A;
   --section-payment:  #2D9CDB;
   --section-docs:     #828282;
@@ -77,12 +85,18 @@ html, body {
   padding: 0;
 }
 
+app-root {
+  display: block;
+  height: 100%;
+}
+
 body {
   background: var(--bg-base);
   color: var(--text-primary);
   font-family: 'Sora', system-ui, -apple-system, sans-serif;
   font-size: 14px;
   line-height: 1.5;
+  overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -132,6 +146,34 @@ body {
   50%      { opacity: 0.4; }
 }
 
+@keyframes status-pulse {
+  0% {
+    background-color: var(--status-pulse-highlight);
+    box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 18%, transparent);
+    transform: scale(1);
+  }
+
+  45% {
+    background-color: var(--status-pulse-highlight);
+    box-shadow: 0 0 0 0.35rem color-mix(in srgb, currentColor 12%, transparent);
+    transform: scale(1.015);
+  }
+
+  100% {
+    background-color: var(--status-pulse-highlight);
+    box-shadow: 0 0 0 0 transparent;
+    transform: scale(1);
+  }
+}
+
 .animate-fade-in  { animation: fadeIn 200ms ease-out; }
 .animate-slide-in { animation: slideIn 200ms ease-out; }
 .animate-pulse    { animation: pulse-dot 1.5s ease-in-out infinite; }
+.animate-status-pulse { animation: status-pulse 420ms ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
