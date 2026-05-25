@@ -13,7 +13,7 @@ const ACTION_LABELS: Record<string, string> = {
   case_operative: 'Caso operativo', candidate_data_consolidated: 'Datos consolidados',
   task_started: 'Tarea iniciada', task_completed: 'Tarea completada',
   task_failed: 'Tarea fallida', task_skipped: 'Tarea omitida',
-  email_approved: 'Plantilla de email aprobada',
+   email_approved: 'Correo aprobado',
 };
 
 const SENSITIVE_KEYS = new Set([

@@ -13,6 +13,43 @@ import { OnboardingTask, TaskType, TASK_LABELS } from '../../../models/onboardin
             <p class="text-sm text-[var(--text-tertiary)]">Las tareas se crean al activar el onboarding.</p>
           </div>
         } @else {
+          <!-- Manual / automatic execution -->
+          <div class="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+            <div class="flex items-center justify-between gap-4">
+              <div class="min-w-0">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-tertiary)]">Control de ejecución</p>
+                <h3 class="mt-1 text-sm font-bold text-[var(--text-primary)]">Ejecución de tareas</h3>
+                <p class="mt-0.5 text-xs text-[var(--text-tertiary)]">
+                  Cuando está activa, las tareas avanzan solas. Si la apagás, quedan en pendiente hasta que las ejecutes manualmente.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                (click)="svc.autoExecuteTasks.set(!svc.autoExecuteTasks())"
+                class="inline-flex items-center gap-3 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-base)] px-3 py-2 text-left transition-colors hover:bg-[var(--bg-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
+                [attr.aria-pressed]="svc.autoExecuteTasks()"
+                aria-label="Alternar ejecución automática"
+              >
+                <span class="flex flex-col leading-none">
+                  <span class="text-[11px] font-semibold text-[var(--text-secondary)]">Ejecución automática</span>
+                  <span class="text-[10px] font-bold uppercase tracking-[0.18em]" [style.color]="svc.autoExecuteTasks() ? 'var(--brand-primary)' : 'var(--text-secondary)'">
+                    {{ svc.autoExecuteTasks() ? 'Activa' : 'Manual' }}
+                  </span>
+                </span>
+                <span class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full p-0.5 transition-colors" [style.backgroundColor]="svc.autoExecuteTasks() ? 'var(--brand-primary)' : 'var(--border-subtle)'">
+                  <span
+                    class="h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200"
+                    [style.transform]="svc.autoExecuteTasks() ? 'translateX(20px)' : 'translateX(0)'"
+                  ></span>
+                </span>
+                <span class="text-[10px] font-extrabold uppercase tracking-[0.2em]" [style.color]="svc.autoExecuteTasks() ? 'var(--brand-primary)' : 'var(--text-secondary)'">
+                  {{ svc.autoExecuteTasks() ? 'ON' : 'OFF' }}
+                </span>
+              </button>
+            </div>
+          </div>
+
           <!-- Progress header -->
           <div class="bg-[var(--bg-elevated)] rounded-xl border border-[var(--border-subtle)] p-6">
             <div class="flex items-center gap-4">
@@ -35,7 +72,7 @@ import { OnboardingTask, TaskType, TASK_LABELS } from '../../../models/onboardin
               <div>
                 <h3 class="text-sm font-bold text-[var(--text-primary)]">Progreso de activación</h3>
                 <p class="text-xs text-[var(--text-tertiary)] mt-0.5">
-                  {{ completedCount() }} de {{ c.tasks.length }} tareas completadas
+                  {{ completedCount() }} de {{ c.tasks.length }} completadas
                   @if (failedCount() > 0) { · {{ failedCount() }} fallidas }
                 </p>
               </div>
@@ -45,8 +82,9 @@ import { OnboardingTask, TaskType, TASK_LABELS } from '../../../models/onboardin
           <!-- Task list -->
           <div class="space-y-2">
             @for (task of c.tasks; track task.id) {
-              <div class="bg-[var(--bg-elevated)] rounded-xl border border-[var(--border-subtle)] p-4 flex items-center justify-between gap-3">
-                <div class="flex items-center gap-3 min-w-0">
+              <div class="bg-[var(--bg-elevated)] rounded-xl border border-[var(--border-subtle)] p-4">
+                <div class="flex items-start justify-between gap-3">
+                <div class="flex items-start gap-3 min-w-0">
                   @switch (task.status) {
                     @case ('success') {
                       <svg class="w-4 h-4 text-[var(--status-success)] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -65,18 +103,30 @@ import { OnboardingTask, TaskType, TASK_LABELS } from '../../../models/onboardin
                     }
                   }
                   <div class="min-w-0">
-                    <p class="text-sm font-medium text-[var(--text-primary)] truncate">{{ taskLabel(task) }}</p>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <p class="text-sm font-medium text-[var(--text-primary)] truncate">{{ taskLabel(task) }}</p>
+                      <span [class]="'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] border ' + statusBadgeClass(task.status)">
+                        {{ statusLabel(task.status) }}
+                      </span>
+                    </div>
+                    <p class="mt-0.5 text-[10px] font-medium text-[var(--text-tertiary)]">
+                      {{ task.status === 'pending' ? 'Pendiente de ejecución' : task.status === 'running' ? 'En ejecución' : task.status === 'failed' ? 'Requiere intervención' : 'Completada' }}
+                    </p>
                     @if (task.lastError) {
                       <p class="text-xs text-[var(--status-error)] mt-0.5 truncate">{{ task.lastError }}</p>
                     }
-                    <p class="text-[10px] text-[var(--text-tertiary)] mt-0.5">{{ statusLabel(task.status) }} · {{ ownerLabel(task.owner) }}</p>
+                    <p class="text-[10px] text-[var(--text-tertiary)] mt-0.5">{{ ownerLabel(task.owner) }}</p>
                   </div>
                 </div>
-                <div class="flex items-center gap-1.5 flex-shrink-0">
+                <div class="flex flex-col items-end gap-1.5 flex-shrink-0">
+                  @if (task.status === 'pending' && !svc.autoExecuteTasks()) {
+                    <button (click)="svc.executeTask(c.id, task.id)" class="px-2.5 py-1 rounded text-[10px] font-bold uppercase text-white bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)]">Ejecutar</button>
+                  }
                   @if (task.status === 'failed') {
                     <button (click)="svc.retryTask(c.id, task.id)" class="px-2.5 py-1 rounded text-[10px] font-bold uppercase text-[var(--brand-primary)] bg-[var(--brand-primary-subtle)] hover:opacity-80">Reintentar</button>
                     <button (click)="svc.skipTask(c.id, task.id)" class="px-2.5 py-1 rounded text-[10px] font-bold uppercase text-[var(--text-tertiary)] bg-[var(--bg-subtle)] hover:opacity-80">Omitir</button>
                   }
+                </div>
                 </div>
               </div>
             }
@@ -101,8 +151,20 @@ export class TasksTabComponent {
   }
 
   ownerLabel(o: string): string {
-    const m: Record<string, string> = { system: 'Automático', it: 'IT', admin: 'Administración', rrhh: 'RRHH' };
+    const m: Record<string, string> = { system: 'Automático', it: 'TI', admin: 'Administración', rrhh: 'RRHH' };
     return m[o] || o;
+  }
+
+  statusBadgeClass(status: string): string {
+    const m: Record<string, string> = {
+      pending: 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border-[var(--border-subtle)]',
+      running: 'bg-[var(--status-info-subtle)] text-[var(--status-info)] border-transparent',
+      success: 'bg-[var(--status-success-subtle)] text-[var(--status-success)] border-transparent',
+      failed: 'bg-[var(--status-error-subtle)] text-[var(--status-error)] border-transparent',
+      skipped: 'bg-[var(--bg-subtle)] text-[var(--text-tertiary)] border-[var(--border-subtle)]',
+      manual_required: 'bg-[var(--brand-primary-subtle)] text-[var(--brand-primary)] border-transparent',
+    };
+    return m[status] || m['pending'];
   }
 
   percent(): number {
