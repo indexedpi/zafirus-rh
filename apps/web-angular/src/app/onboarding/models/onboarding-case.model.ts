@@ -73,8 +73,11 @@ export interface EmailTemplate {
   onboardingFolderUrl: string;
   kitRedesUrl: string;
   temporaryPassword: string;
+  /** @deprecated Kept only for backward compatibility; use status instead. */
   approvedAt: number | null;
   sentAt: number | null;
+  scheduledFor: number | null;
+  status: 'draft' | 'scheduled' | 'sent';
 }
 
 export interface GroupSuggestion {
@@ -177,7 +180,7 @@ export interface Toast {
 
 // Constants
 export const STATUS_CONFIG: Record<CaseStatus, { label: string; color: string; bgColor: string }> = {
-  draft:                      { label: 'Borrador',    color: 'var(--text-secondary)', bgColor: 'rgba(255,255,255,0.06)' },
+  draft:                      { label: 'Borrador',    color: 'var(--section-agenda)', bgColor: 'var(--section-agenda-subtle)' },
   candidate_invited:          { label: 'Invitado',    color: 'var(--status-info)',     bgColor: 'var(--status-info-subtle)' },
   candidate_submitted:        { label: 'Enviado',     color: 'var(--status-info)',     bgColor: 'var(--status-info-subtle)' },
   hr_review:                  { label: 'En revisión', color: 'var(--status-warning)',  bgColor: 'var(--status-warning-subtle)' },
@@ -185,18 +188,18 @@ export const STATUS_CONFIG: Record<CaseStatus, { label: string; color: string; b
   active_pending_automation:  { label: 'Procesando',  color: 'var(--status-warning)',  bgColor: 'var(--status-warning-subtle)' },
   operative:                  { label: 'Operativo',   color: 'var(--status-success)',  bgColor: 'var(--status-success-subtle)' },
   blocked:                    { label: 'Bloqueado',   color: 'var(--status-error)',    bgColor: 'var(--status-error-subtle)' },
-  cancelled:                  { label: 'Cancelado',   color: 'var(--text-tertiary)',   bgColor: 'rgba(255,255,255,0.06)' },
+  cancelled:                  { label: 'Cancelado',   color: 'var(--section-agenda)',  bgColor: 'var(--section-agenda-subtle)' },
 };
 
 export const TASK_LABELS: Record<TaskType, string> = {
   CREATE_GOOGLE_USER:         'Crear usuario en Google Workspace',
   ADD_GOOGLE_GROUPS:          'Agregar a grupos',
   CONFIGURE_GMAIL_SIGNATURE:  'Configurar firma de Gmail',
-  SEND_WELCOME_EMAIL:         'Enviar email de bienvenida',
+  SEND_WELCOME_EMAIL:         'Enviar correo de bienvenida',
   ANNOUNCE_IN_GROUPS:         'Anunciar en grupos',
   POST_INTERNAL_ANNOUNCEMENT: 'Publicar anuncio interno',
   REQUEST_DEVICE:             'Solicitar dispositivo',
-  NOTIFY_ADMINISTRATION:      'Notificar a Administración',
+  NOTIFY_ADMINISTRATION:      'Avisar a Administración',
 };
 
 export const COUNTRIES = [
@@ -232,12 +235,12 @@ export const TAX_ID_TYPES = [
 ];
 
 export const TEAMS: { value: Team; label: string }[] = [
-  { value: 'engineering',     label: 'Engineering' },
-  { value: 'design',          label: 'Design' },
-  { value: 'product',         label: 'Product' },
+  { value: 'engineering',     label: 'Ingeniería' },
+  { value: 'design',          label: 'Diseño' },
+  { value: 'product',         label: 'Producto' },
   { value: 'rrhh',            label: 'RRHH' },
   { value: 'administration',  label: 'Administración' },
-  { value: 'leadership',      label: 'Leadership' },
+  { value: 'leadership',      label: 'Liderazgo' },
 ];
 
 export const CONTRACT_TYPES: { value: ContractType; label: string }[] = [
@@ -248,12 +251,12 @@ export const CONTRACT_TYPES: { value: ContractType; label: string }[] = [
 
 export const SEED_GROUPS: Omit<GroupSuggestion, 'status' | 'workspaceGroupId'>[] = [
   { email: 'all@zafirus.tech',           displayName: 'Todo el equipo', category: 'all' },
-  { email: 'engineering@zafirus.tech',   displayName: 'Engineering',    category: 'team' },
-  { email: 'design@zafirus.tech',        displayName: 'Design',         category: 'team' },
-  { email: 'product@zafirus.tech',       displayName: 'Product',        category: 'team' },
+  { email: 'engineering@zafirus.tech',   displayName: 'Ingeniería',     category: 'team' },
+  { email: 'design@zafirus.tech',        displayName: 'Diseño',          category: 'team' },
+  { email: 'product@zafirus.tech',       displayName: 'Producto',        category: 'team' },
   { email: 'rrhh@zafirus.tech',          displayName: 'RRHH',           category: 'team' },
   { email: 'argentina@zafirus.tech',     displayName: 'Argentina',      category: 'country' },
   { email: 'latam@zafirus.tech',         displayName: 'LATAM',          category: 'country' },
   { email: 'international@zafirus.tech', displayName: 'Internacional',  category: 'country' },
-  { email: 'contractors@zafirus.tech',   displayName: 'Contractors',    category: 'cross' },
+  { email: 'contractors@zafirus.tech',   displayName: 'Contratistas',   category: 'cross' },
 ];
