@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { OnboardingMockService } from '../../services/onboarding-mock.service';
 import { ZafirusLogoComponent } from '../../../shared/components/zafirus-logo/zafirus-logo.component';
 import { CandidateData, Reference, TAX_ID_TYPES } from '../../models/onboarding-case.model';
+import { formatCuit, isValidEmail as isValidEmailFn, validateCbu, validateCuit } from '../../../shared/utils/cuit-validator';
 
 const STEPS = [
   { id: 1, title: 'Identificación fiscal' },
@@ -16,8 +17,9 @@ const STEPS = [
   standalone: true,
   imports: [FormsModule, ZafirusLogoComponent],
   template: `
-    @if (svc.selectedCase(); as c) {
-      @if (c.candidateData; as cd) {
+    @if (svc.isDemo()) {
+      @if (svc.selectedCase(); as c) {
+        @if (c.candidateData; as cd) {
         @if (cd.submittedAt) {
           <!-- Submitted state -->
           <div class="h-full flex flex-col items-center justify-center text-center px-6 py-12 bg-[var(--bg-subtle)]">
@@ -90,18 +92,22 @@ const STEPS = [
                   }
                   <div class="space-y-5">
                     <div>
-                      <label class="block text-[11px] font-medium text-[var(--text-tertiary)] mb-1">Tipo de identificación</label>
-                      <select [(ngModel)]="cd.taxIdType" (ngModelChange)="updateData({ taxIdType: $event })"
+                      <label class="block text-[11px] font-medium text-[var(--text-tertiary)] mb-1">Tipo de identificación *</label>
+                      <select [(ngModel)]="cd.taxIdType" (ngModelChange)="onTaxIdTypeChange($event)"
                         class="w-full bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--border-focus)]">
                         <option value="">Seleccioná un tipo</option>
                         @for (t of taxIdTypes; track t.code) { <option [value]="t.code">{{ t.label }}</option> }
                       </select>
                     </div>
                     <div>
-                      <label class="block text-[11px] font-medium text-[var(--text-tertiary)] mb-1">Número de identificación</label>
-                      <input [(ngModel)]="cd.taxIdValue" (ngModelChange)="updateData({ taxIdValue: $event })"
+                      <label class="block text-[11px] font-medium text-[var(--text-tertiary)] mb-1">Número de identificación *</label>
+                      <input [(ngModel)]="cd.taxIdValue" (ngModelChange)="onTaxIdValueChange($event)"
                         [placeholder]="taxIdMask(cd.taxIdType)"
-                        class="w-full bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--border-focus)]">
+                        [attr.inputmode]="isArgentineTaxIdType(cd.taxIdType) ? 'numeric' : null"
+                        [attr.maxlength]="isArgentineTaxIdType(cd.taxIdType) ? 13 : null"
+                        class="w-full bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--border-focus)] font-mono"
+                        [class.border-red-400]="!!taxIdError()">
+                      @if (taxIdError()) { <p class="mt-1 text-xs text-[var(--status-error)]">{{ taxIdError() }}</p> }
                     </div>
                   </div>
                 }
@@ -124,9 +130,12 @@ const STEPS = [
                   </div>
                   @if (cd.paymentMethod === 'CBU') {
                     <div class="mt-4">
-                      <label class="block text-[11px] font-medium text-[var(--text-tertiary)] mb-1">CBU</label>
-                      <input [(ngModel)]="cd.cbu" (ngModelChange)="updateData({ cbu: $event })" placeholder="22 dígitos"
-                        class="w-full bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--border-focus)] font-mono">
+                      <label class="block text-[11px] font-medium text-[var(--text-tertiary)] mb-1">CBU *</label>
+                      <input [(ngModel)]="cd.cbu" (ngModelChange)="onCbuChange($event)" placeholder="22 dígitos"
+                        inputmode="numeric" maxlength="22"
+                        class="w-full bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--border-focus)] font-mono"
+                        [class.border-red-400]="!!cbuError()">
+                      @if (cbuError()) { <p class="mt-1 text-xs text-[var(--status-error)]">{{ cbuError() }}</p> }
                     </div>
                   }
                   @if (cd.paymentMethod === 'CRYPTO') {
@@ -157,7 +166,9 @@ const STEPS = [
                         <input [(ngModel)]="ref.fullName" placeholder="Nombre completo" class="w-full bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--border-focus)]">
                         <input [(ngModel)]="ref.relationship" placeholder="Relación" class="w-full bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--border-focus)]">
                         <input [(ngModel)]="ref.company" placeholder="Empresa" class="w-full bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--border-focus)]">
-                        <input [(ngModel)]="ref.email" placeholder="Email" class="w-full bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--border-focus)]">
+                        <input [(ngModel)]="ref.email" type="email" placeholder="Correo" class="w-full bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--border-focus)]"
+                          [class.border-red-400]="!!ref.email && !isValidEmail(ref.email)">
+                        @if (ref.email && !isValidEmail(ref.email)) { <p class="text-xs text-[var(--status-error)] sm:col-span-2">Ingresá un correo válido.</p> }
                         <input [(ngModel)]="ref.phone" placeholder="Teléfono" class="w-full bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--border-focus)]">
                       </div>
                     </div>
@@ -199,17 +210,18 @@ const STEPS = [
               } @else { <div></div> }
 
               @if (cd.currentStep < 4) {
-                <button (click)="nextStep()" class="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)]">
+                <button (click)="nextStep()" [disabled]="!canAdvanceStep()" class="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60">
                   Siguiente
                 </button>
               } @else {
-                <button (click)="submitForm()" class="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)]">
+                <button (click)="submitForm()" [disabled]="!canSubmitForm()" class="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60">
                   Enviar datos
                 </button>
               }
             </div>
           </div>
         }
+      }
       }
     }
   `,
@@ -222,12 +234,92 @@ export class CandidateWizardComponent {
 
   readonly paymentMethods = [
     { value: 'CBU' as const, label: 'Transferencia bancaria (CBU)', desc: 'Cuenta bancaria argentina' },
-    { value: 'WIRE' as const, label: 'Wire transfer', desc: 'Cuenta bancaria internacional' },
-    { value: 'CRYPTO' as const, label: 'Crypto', desc: 'Wallet de criptomonedas' },
+    { value: 'WIRE' as const, label: 'Transferencia internacional', desc: 'Cuenta bancaria del exterior' },
+    { value: 'CRYPTO' as const, label: 'Cripto', desc: 'Billetera de criptomonedas' },
   ];
 
   taxIdMask(type: string): string {
     return TAX_ID_TYPES.find(t => t.code === type)?.mask || 'Ingresá el número';
+  }
+
+  isArgentineTaxIdType(type: string): boolean {
+    return type === 'CUIT' || type === 'CUIL';
+  }
+
+  isValidEmail(value: string): boolean {
+    return isValidEmailFn(value);
+  }
+
+  private currentData(): CandidateData | null {
+    return this.svc.selectedCase()?.candidateData ?? null;
+  }
+
+  taxIdError(): string | null {
+    const cd = this.currentData();
+    if (!cd) return null;
+    if (!cd.taxIdType || !cd.taxIdValue.trim()) return 'Completá la identificación fiscal.';
+
+    if (this.isArgentineTaxIdType(cd.taxIdType)) {
+      const validation = validateCuit(cd.taxIdValue);
+      return validation.valid ? null : validation.error ?? 'El CUIT no es válido.';
+    }
+
+    return null;
+  }
+
+  cbuError(): string | null {
+    const cd = this.currentData();
+    if (!cd || cd.paymentMethod !== 'CBU') return null;
+    if (!cd.cbu.trim()) return 'Completá el CBU.';
+
+    const validation = validateCbu(cd.cbu);
+    return validation.valid ? null : validation.error ?? 'El CBU no es válido.';
+  }
+
+  referencesError(): string | null {
+    const cd = this.currentData();
+    if (!cd) return null;
+    const invalidReference = cd.references.find(ref => !!ref.email.trim() && !this.isValidEmail(ref.email));
+    return invalidReference ? 'Revisá los correos de las referencias.' : null;
+  }
+
+  onTaxIdTypeChange(type: string): void {
+    const cd = this.currentData();
+    if (!cd) return;
+
+    const nextValue = this.isArgentineTaxIdType(type) ? formatCuit(cd.taxIdValue) : cd.taxIdValue;
+    this.updateData({ taxIdType: type, taxIdValue: nextValue });
+  }
+
+  onTaxIdValueChange(value: string): void {
+    const cd = this.currentData();
+    if (!cd) return;
+
+    const nextValue = this.isArgentineTaxIdType(cd.taxIdType) ? formatCuit(value) : value;
+    this.updateData({ taxIdValue: nextValue });
+  }
+
+  onCbuChange(value: string): void {
+    const cleaned = value.replace(/[^0-9]/g, '').slice(0, 22);
+    this.updateData({ cbu: cleaned });
+  }
+
+  canAdvanceStep(): boolean {
+    const cd = this.currentData();
+    if (!cd) return false;
+
+    if (cd.currentStep === 1) return !this.taxIdError();
+    if (cd.currentStep === 2) return !!cd.paymentMethod && !this.cbuError();
+    if (cd.currentStep === 3) return !this.referencesError();
+
+    return true;
+  }
+
+  canSubmitForm(): boolean {
+    const cd = this.currentData();
+    if (!cd) return false;
+
+    return !this.taxIdError() && !!cd.paymentMethod && !this.cbuError() && !this.referencesError();
   }
 
   updateData(data: Partial<CandidateData>): void {
@@ -240,12 +332,11 @@ export class CandidateWizardComponent {
     if (!c?.candidateData) return;
     const cd = c.candidateData;
 
-    // Validate step 1
-    if (cd.currentStep === 1 && (!cd.taxIdType || !cd.taxIdValue)) {
+    if (!this.canAdvanceStep()) {
       this.showErrors.set(true);
       return;
     }
-    // Validate step 2
+
     if (cd.currentStep === 2 && !cd.paymentMethod) {
       this.svc.addToast('warning', 'Seleccioná un método de cobro');
       return;
@@ -288,6 +379,10 @@ export class CandidateWizardComponent {
   submitForm(): void {
     const c = this.svc.selectedCase();
     if (!c?.candidateData) return;
+    if (!this.canSubmitForm()) {
+      this.showErrors.set(true);
+      return;
+    }
     const completed = c.candidateData.completedSteps.includes(4) ? c.candidateData.completedSteps : [...c.candidateData.completedSteps, 4];
     this.svc.updateCandidateData(c.id, { completedSteps: completed });
     this.svc.submitCandidateForm(c.id);

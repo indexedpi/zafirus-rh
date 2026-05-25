@@ -8,10 +8,10 @@ import { Component } from '@angular/core';
       <div class="flex items-center gap-2">
         <span class="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider">Zafirus</span>
         <span class="text-[10px] text-[var(--text-tertiary)]">·</span>
-        <span class="text-xs font-medium text-[var(--text-secondary)]">Recursos Humanos</span>
+        <span class="text-xs font-medium text-[var(--text-secondary)]">Recursos humanos</span>
       </div>
       <div class="flex items-center gap-2">
-        <span class="text-[10px] text-[var(--text-tertiary)] font-mono">Onboarding v1</span>
+        <span class="text-[10px] text-[var(--text-tertiary)] font-mono">Alta v1</span>
       </div>
     </header>
   `,
